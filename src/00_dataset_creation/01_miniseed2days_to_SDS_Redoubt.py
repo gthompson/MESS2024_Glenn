@@ -1,12 +1,22 @@
 #!/usr/bin/env python
+
+# not for running at MESS2024
+# This script is intended to be run on hal9000 at USF seismic lab.
+# It gathers continuous waveform data for Redoubt 2009 that is stored in an Antelope/CSS3.0 database.
+# It uses Antelope tools to create an SDS archive that will be made available at MESS2024.
+# It then wraps that in an Antelope/CSS3.0 database. 
+
 import os
+import sys
 import datetime, pytz
 import glob
+sys.path.append('..')
+import setup_paths
+paths = setup_paths.paths
+
 inputdirroot =  '/data/RedoubtCSS3.0/2009'
-outputdir = 'data/continuous/SDS'
-dbout = f"db/dbRedoubt"
-if not os.path.isdir('db'):
-    os.makedirs('db')
+outputdir = paths['SDS_DIR']
+dbout = os.path.join(paths['DB_DIR'], 'dbRedoubt2009')
 
 utc = pytz.timezone('UTC')
 start_dt_utc = utc.localize(datetime.datetime(2009, 3, 1, 0, 0, 0))

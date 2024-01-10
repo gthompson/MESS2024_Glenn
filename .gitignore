@@ -1,12 +1,14 @@
 SDS/
-SDS_raw/
-SDS_velocity/
-SDS_displacement/
+SDS_*/
 *.pickle
 *.pkl
 *.png
 *.pdf
 *.doc*
+*.swp
+obsolete/
+db/
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
