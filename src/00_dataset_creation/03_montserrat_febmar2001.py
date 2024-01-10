@@ -17,14 +17,14 @@ import obspy
 sys.path.append('..')
 import setup_paths
 paths = setup_paths.paths
-sys.path.append('../../lib')
+sys.path.append('../../src/lib')
 import SDS
 
 inputdirroot =  '/data/SEISAN_DB/WAV/DSNC_'
 outputdir = paths['SDS_DIR']
 dbout = os.path.join(paths['DB_DIR'],"dbMontserrat2001")
 sdsobj = SDS.SDSobj(outputdir)
-
+merge = False
 def sds2db(SDS_DIR, jday):
     allfiles = glob.glob(os.path.join(SDS_DIR, '*', '*', '*', '*.D', f'*{jday}'))
     allfilesstr = " ".join(allfiles)
@@ -37,8 +37,8 @@ delta = datetime.timedelta(days=1)
 mseeddir = 'seisan2mseed'
 if not os.path.isdir(mseeddir):
     os.makedirs(mseeddir)
-
-os.system(f"rm -rf {outputdir}/* {dbout}.*")
+if not merge:
+    os.system(f"rm -rf {outputdir}/2001/MV/M*/*.D/*.0?? {dbout}.*")
 if not os.path.isdir(outputdir):
     os.makedirs(outputdir)
 laststarttime=0

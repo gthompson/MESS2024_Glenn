@@ -15,7 +15,7 @@ import obspy
 sys.path.append('..')
 import setup_paths
 paths = setup_paths.paths
-sys.path.append('../../lib')
+sys.path.append('../../src/lib')
 from SAM import RSAM
 
 os.system(f"cp /data/Montserrat/ASN/RSAM/RSAM_1/M???????.DAT {paths['SAMBINARY_DIR']}")
@@ -24,7 +24,7 @@ st = obspy.core.Stream()
 stime = obspy.core.UTCDateTime(1996,1,1,0,0,0)
 etime = obspy.core.UTCDateTime(1996,12,31,23,59,59)
 stations = ['MCPZ', 'MGAT', 'MGHZ', 'MLGT', 'MRYT', 'MSPT', 'MSSZ', 'MWHT']
-rsamObj = SAM.readRSAMbinary(paths['SAMBINARY_DIR'], stations, stime, etime)
+rsamObj = RSAM.readRSAMbinary(paths['SAMBINARY_DIR'], stations, stime, etime)
 #rsamObj.plot()
 rsamObj.write(paths['SAM_DIR'], ext='csv')
 rsamObj.write(paths['SAM_DIR'], ext='pickle')

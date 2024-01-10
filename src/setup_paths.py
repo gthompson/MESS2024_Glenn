@@ -3,6 +3,7 @@
 import os
 
 paths = {}
+paths['PROJECT_DIR'] = os.path.join(os.getenv('HOME'), 'work','PROJECTS','MESS2024_Glenn')
 paths['PROJECT_DIR'] = os.path.join(os.path.expanduser('~'), 'work','PROJECTS','MESS2024_Glenn')
 paths['CONTINUOUS_DATA_DIR'] = os.path.join(paths['PROJECT_DIR'], 'data', 'continuous')
 paths['SDS_DIR'] = os.path.join(paths['CONTINUOUS_DATA_DIR'], 'SDS')
