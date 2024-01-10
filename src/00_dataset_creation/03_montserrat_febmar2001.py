@@ -69,7 +69,10 @@ while (start_dt_utc <= end_dt_utc):
     print('- Found %d files' % len(allfiles))
     for file in allfiles:
         print(f'- Processing {file}')
-        st = obspy.core.read(file, format='seisan')
+        try:
+            st = obspy.core.read(file, format='seisan')
+        except:
+            continue
         thisstarttime = st[0].stats.starttime
         if thisstarttime - laststarttime == 1201.0: # should be 20 * 60 s = 1200 s
             thisstarttime -= 1.0
