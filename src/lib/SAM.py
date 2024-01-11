@@ -855,13 +855,18 @@ class VSEM(VSAM):
     def sum_energy(self, startt, endt, inventory, source):
         st = self.to_stream('energy').trim(starttime=startt, endtime=endt)
         r_km, coords = self.get_distance_km(inventory, source)
+        
+        totalE = {}
+        magnitude = {}
         for tr in st:
             r = r_km[tr.id] * 1000.0
             s = np.nansum(tr.data)
-            s /= 75.0 # temporary kludge because i forget to use s;lng rate in VSEM coalculate befopre, when i rerun, remove this
             s = self.eseismic(s, r)
             m = energy2magnitude(s)
-            print(tr.id, s, m)
+            print(f"{tr.id}, Joules: {s:.1e}, Magnitude: {m:.2f}")
+            totalE[tr.id] = s
+            magnitude[tr.id] = m
+        return totalE, magnitude
 
     @staticmethod
     def eacoustic(y, r):
