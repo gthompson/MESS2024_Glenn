@@ -12,11 +12,14 @@ import datetime
 import pytz
 import glob
 import obspy
+from obspy.clients.filesystem.sds import Client as sdsclient
+from obspy.core.inventory.inventory import read_inventory
 sys.path.append('..')
 import setup_paths
 paths = setup_paths.paths
 sys.path.append('../../src/lib')
 import SDS
+import InventoryTools
 from SAM import RSAM, VSAM, VSEM, DSAM, DR, DRS, EMAG
 
 def sds2db(SDS_DIR, jday):
@@ -31,7 +34,7 @@ def seisandb2SDS(seisandbdir, sdsdir, start_dt_utc, end_dt_utc, dbout):
     if not os.path.isdir(mseeddir):
         os.makedirs(mseeddir)
 
-    os.system(f"rm -rf {sdsdir}/* {dbout}.*")
+    #os.system(f"rm -rf {sdsdir}/* {dbout}.*")
     if not os.path.isdir(sdsdir):
         os.makedirs(sdsdir)
     laststarttime=0
@@ -40,7 +43,8 @@ def seisandb2SDS(seisandbdir, sdsdir, start_dt_utc, end_dt_utc, dbout):
         print(start_dt_utc, end="\n")
         ymd = start_dt_utc.strftime("%Y%m%d")
         chuckfile = f"chuckmseedblocks{ymd}.msd"
-        startepoch = int(start_dt_utc.timestamp())
+        #startepoch = int(start_dt_utc.timestamp())
+        startepoch = int(start_dt_utc.timestamp)
         endepoch = startepoch + 86400
         jday = start_dt_utc.strftime("%j")
         
@@ -76,6 +80,9 @@ def seisandb2SDS(seisandbdir, sdsdir, start_dt_utc, end_dt_utc, dbout):
             for tr in st:
                 tr.stats.starttime = thisstarttime
                 tr.stats.sampling_rate = 75.0
+                if len(tr.stats.channel)==2 and len(tr.stats.location)==1:
+                   tr.stats.channel = tr.stats.channel + tr.stats.location 
+                   tr.stats.location =""
                 if tr.stats.channel[0:2]=='SB':
                     tr.stats.channel = 'BH' + tr.stats.channel[2:]
                 if tr.stats.channel[0:2]=='S ':
@@ -91,7 +98,7 @@ def seisandb2SDS(seisandbdir, sdsdir, start_dt_utc, end_dt_utc, dbout):
             
             sdsobj.stream = st
             sdsobj.write()
-        sds2db(sdsdir, jday)
+        #sds2db(sdsdir, jday)
         start_dt_utc += delta
 
 def correct_seed_id(tr):
@@ -132,8 +139,8 @@ def SDS2SAM_sausage(paths, startTime, endTime, sampling_interval=60):
         daytime += secondsPerDay
 
 
-    SDSvelWriteClient = SDS.SDSobj(paths['SDS_VEL'], sds_type='D', format='MSEED')
-    SDSdispWriteClient = SDS.SDSobj(paths['SDS_DISP'], sds_type='D', format='MSEED')
+    SDSvelWriteClient = SDS.SDSobj(paths['SDS_VEL_DIR'], sds_type='D', format='MSEED')
+    SDSdispWriteClient = SDS.SDSobj(paths['SDS_DISP_DIR'], sds_type='D', format='MSEED')
 
     pre_filt = (0.01, 0.02, 18.0, 36.0)
     inv = read_inventory(os.path.join(paths['RESPONSE_DIR'],'MV.xml'), format='stationxml')   
@@ -150,7 +157,7 @@ def SDS2SAM_sausage(paths, startTime, endTime, sampling_interval=60):
         print(f'- got {len(stMV)} Trace ids') 
 
         print(f'Computing RSAM metrics for {daytime}, and saving to pickle files')
-        rsamMV24h = RSAM(stream=stMV, sampling_interval=SAMPLING_INTERVAL)
+        rsamMV24h = RSAM(stream=stMV, sampling_interval=sampling_interval)
         rsamMV24h.write(paths['SAM_DIR'], ext='pickle')
 
         vel_st = obspy.core.Stream()
@@ -176,7 +183,7 @@ def SDS2SAM_sausage(paths, startTime, endTime, sampling_interval=60):
                 SDSdispWriteClient .stream = this_st
                 SDSdispWriteClient.write(overwrite=False, merge=False)
                 this_tr.stats['units'] = 'm'
-                disp_st.append(this_st)
+                disp_st.append(this_tr)
 
             else:
                 print(f"{tr.id} not found in MV.xml")
@@ -185,28 +192,28 @@ def SDS2SAM_sausage(paths, startTime, endTime, sampling_interval=60):
 
         # VSAM
         vsamMV24h = VSAM(stream=vel_st, sampling_interval=sampling_interval)
-        vsamMV24h.write(SAM_DIR, ext='pickle')
+        vsamMV24h.write(paths['SAM_DIR'], ext='pickle')
         
         # VSEM
         vsemMV24h = VSEM(stream=vel_st, sampling_interval=sampling_interval)
-        vsemMV24h.write(SAM_DIR, ext='pickle')
+        vsemMV24h.write(paths['SAM_DIR'], ext='pickle')
 
         # DSAM
         dsamMV24h = DSAM(stream=disp_st, sampling_interval=sampling_interval)
-        dsamMV24h.write(SAM_DIR, ext='pickle')
+        dsamMV24h.write(paths['SAM_DIR'], ext='pickle')
             
         # DR
         source = {'lat':16.71111, 'lon':-62.17722}
-        DRmv = dsamMV.reduce(inv, source, surfaceWaves=False, Q=None)
-        DRmv.write(SAM_DIR=SAM_DIR, overwrite=True)
+        DRmv24h = dsamMV24h.reduce(inv, source, surfaceWaves=False, Q=None)
+        DRmv24h.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
 
         # DRS
-        DRSmv = dsamMV.reduce(invMVO, source, surfaceWaves=True, Q=None)
-        DRSmv.write(SAM_DIR=SAM_DIR, overwrite=True)
+        DRSmv24h = dsamMV24h.reduce(inv, source, surfaceWaves=True, Q=None)
+        DRSmv24h.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
 
         # EMAG
-        emagMV24h = vsemMV24.compute_emag()
-        emagMV24h.write(SAM_DIR=SAM_DIR, overwrite=True)
+        emagMV24h = vsemMV24h.compute_emag()
+        emagMV24h.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
 
         daytime += secondsPerDay
 
@@ -220,7 +227,7 @@ def SDS2SAM_sausage(paths, startTime, endTime, sampling_interval=60):
 
 def main(seisandbdir, paths, startt, endt):
     dbout = os.path.join(paths['DB_DIR'],f"dbMontserrat{startt.year}")
-    seisan2SDS(seisandbdir, paths['SDS_DIR'], startt, endt, dbout)
+    seisandb2SDS(seisandbdir, paths['SDS_DIR'], startt, endt, dbout)
     SDS2SAM_sausage(paths, startt, endt, sampling_interval=10)
 
 if __name__ == "__main__":

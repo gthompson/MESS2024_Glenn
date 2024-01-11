@@ -9,6 +9,7 @@ import fnmatch
 import obspy
 #from obspy.core.inventory.inventory import Inventory
 from obspy.geodetics.base import gps2dist_azimuth, degrees2kilometers
+from math import pi
 
 class SAM:
 
@@ -73,7 +74,7 @@ class SAM:
             
             t = tr.times('timestamp') # Unix epoch time
             sampling_rate = tr.stats.sampling_rate
-            t = self.__reshape_trace_data(t, sampling_rate, sampling_interval)
+            t = self.reshape_trace_data(t, sampling_rate, sampling_interval)
             df['time'] = pd.Series(np.nanmin(t,axis=1))
 
             if filter:
@@ -83,9 +84,9 @@ class SAM:
                 tr2 = tr.copy()
                 tr2.detrend('demean')
                 tr2.filter('bandpass', freqmin=filter[0], freqmax=filter[1], corners=corners)
-                y = self.__reshape_trace_data(np.absolute(tr2.data), sampling_rate, sampling_interval)
+                y = self.reshape_trace_data(np.absolute(tr2.data), sampling_rate, sampling_interval)
             else:
-                y = self.__reshape_trace_data(np.absolute(tr.data), sampling_rate, sampling_interval)
+                y = self.reshape_trace_data(np.absolute(tr.data), sampling_rate, sampling_interval)
 
             df['min'] = pd.Series(np.nanmin(y,axis=1))   
             df['mean'] = pd.Series(np.nanmean(y,axis=1)) 
@@ -98,7 +99,7 @@ class SAM:
                     tr2 = tr.copy()
                     [flow, fhigh] = bands[key]
                     tr2.filter('bandpass', freqmin=flow, freqmax=fhigh, corners=corners)
-                    y = self.__reshape_trace_data(abs(tr2.data), sampling_rate, sampling_interval)
+                    y = self.reshape_trace_data(abs(tr2.data), sampling_rate, sampling_interval)
                     df[key] = pd.Series(np.nanmean(y,axis=1))
                 if 'LP' in bands and 'VT' in bands:
                     df['fratio'] = np.log2(df['VT']/df['LP'])
@@ -124,7 +125,7 @@ class SAM:
         for id in self.dataframes:
             df = self.dataframes[id]
             df['date'] = pd.to_datetime(df['time'], unit='s')
-            old_sampling_interval = self.__get_sampling_interval(df)
+            old_sampling_interval = self.get_sampling_interval(df)
             if new_sampling_interval > old_sampling_interval:
                 freq = '%.0fmin' % (new_sampling_interval/60)
                 new_df = df.groupby(pd.Grouper(key='date', freq=freq)).mean()
@@ -137,6 +138,22 @@ class SAM:
     def drop(self, id):
         if id in self.__get_trace_ids():
             del self.dataframes[id]
+
+    def get_distance_km(self, inventory, source):
+        distance_km = {}
+        coordinates = {}
+        for seed_id in self.dataframes:
+            coordinates[seed_id] = inventory.get_coordinates(seed_id)
+            if seed_id[0:2]=='MV':
+                if coordinates[seed_id]['longitude'] > 0:
+                    coordinates[seed_id]['longitude']  *= -1
+            #print(coordinates[seed_id])
+            #print(source)
+            distance_m, az_source2station, az_station2source = gps2dist_azimuth(source['lat'], source['lon'], coordinates[seed_id]['latitude'], coordinates[seed_id]['longitude'])
+            #print(distance_m/1000)
+            #distance_km[seed_id] = degrees2kilometers(distance_deg)
+            distance_km[seed_id] = distance_m/1000
+        return distance_km, coordinates
 
     def plot(self, metrics=['mean'], kind='stream', logy=False, equal_scale=False, outfile=None):
         ''' plot a SAM object 
@@ -388,7 +405,7 @@ class SAM:
                                        channel.upper()):
                     continue
             if sampling_interval is not None:
-                if float(sampling_interval) != self.__get_sampling_interval(thisdf):
+                if float(sampling_interval) != self.get_sampling_interval(thisdf):
                     continue
             if npts is not None and int(npts) != self.__get_npts(thisdf):
                 continue
@@ -410,7 +427,7 @@ class SAM:
                 dataSeries = df[metric]
                 tr = obspy.core.Trace(data=np.array(dataSeries))
                 #timeSeries = pd.to_datetime(df['time'], unit='s')
-                tr.stats.delta = self.__get_sampling_interval(df)
+                tr.stats.delta = self.get_sampling_interval(df)
                 tr.stats.starttime = obspy.core.UTCDateTime(df.iloc[0]['time'])
                 tr.id = key
                 if tr.data.size - np.count_nonzero(np.isnan(tr.data)):
@@ -461,8 +478,8 @@ class SAM:
                 continue
             starttime = df.iloc[0]['time']
             yyyy = obspy.core.UTCDateTime(starttime).year
-            samfile = self.get_filename(SAM_DIR, id, yyyy, self.__get_sampling_interval(df), ext)
-            #samfile = os.path.join(SAM_DIR,'SAM_%s_%4d_%ds.%s' % (id, yyyy, self.__get_sampling_interval(df), ext))
+            samfile = self.get_filename(SAM_DIR, id, yyyy, self.get_sampling_interval(df), ext)
+            #samfile = os.path.join(SAM_DIR,'SAM_%s_%4d_%ds.%s' % (id, yyyy, self.get_sampling_interval(df), ext))
 
             if os.path.isfile(samfile) and not overwrite:
                 if ext=='csv':
@@ -507,7 +524,7 @@ class SAM:
         return len(df)
 
     @staticmethod
-    def __get_sampling_interval(df):
+    def get_sampling_interval(df):
         ''' return the sampling interval of an SAM dataframe in seconds '''
         return df.iloc[1]['time'] - df.iloc[0]['time']       
 
@@ -526,13 +543,14 @@ class SAM:
         dfs_dict = self.dataframes.copy() # store this so we can delete during loop, otherwise complains about deleting during iteration
         for id in self.dataframes:
             #print(id, self.dataframes[id]['mean'])
-            if len(self.dataframes[id])==0 or (self.dataframes[id]['mean'] == 0).all() or (pd.isna(self.dataframes[id]['mean'])).all():
+            metrics=self.get_metrics()
+            if len(self.dataframes[id])==0 or (self.dataframes[id][metrics[0]] == 0).all() or (pd.isna(self.dataframes[id][metrics[0]])).all():
                 del dfs_dict[id]
                 self.trace_ids.remove(id)
         self.dataframes = dfs_dict
 
     @staticmethod
-    def __reshape_trace_data(x, sampling_rate, sampling_interval):
+    def reshape_trace_data(x, sampling_rate, sampling_interval):
         ''' reshape data vector from 1-D to 2-D to support vectorized loop for SAM computation '''
         # reshape the data vector into an array, so we can take matplotlib.pyplot.xticks(fontsize= )advantage of np.mean()
         x = np.absolute(x)
@@ -559,7 +577,7 @@ class SAM:
             df = self.dataframes[trid]
             if i==0:
                 contents += f"Metrics: {','.join(df.columns[1:])}" + '\n'
-                contents += f"Sampling Interval={self.__get_sampling_interval(df)} s" + '\n\n'
+                contents += f"Sampling Interval={self.get_sampling_interval(df)} s" + '\n\n'
             startt = self.__get_starttime(df)
             endt = self.__get_endtime(df)        
             contents += f"{trid}: {startt.isoformat()} to {endt.isoformat()}"
@@ -658,21 +676,7 @@ class VSAM(SAM):
 
 class DSAM(SAM):
 
-    def get_distance_km(self, inventory, source):
-        distance_km = {}
-        coordinates = {}
-        for seed_id in self.dataframes:
-            coordinates[seed_id] = inventory.get_coordinates(seed_id)
-            if seed_id[0:2]=='MV':
-                if coordinates[seed_id]['longitude'] > 0:
-                    coordinates[seed_id]['longitude']  *= -1
-            #print(coordinates[seed_id])
-            #print(source)
-            distance_m, az_source2station, az_station2source = gps2dist_azimuth(source['lat'], source['lon'], coordinates[seed_id]['latitude'], coordinates[seed_id]['longitude'])
-            #print(distance_m/1000)
-            #distance_km[seed_id] = degrees2kilometers(distance_deg)
-            distance_km[seed_id] = distance_m/1000
-        return distance_km, coordinates
+
     
     @staticmethod
     def compute_geometrical_spreading_correction(this_distance_km, chan, surfaceWaves=False, wavespeed_kms=2000, peakf=2.0):
@@ -780,8 +784,8 @@ class VSEM(VSAM):
                 print('no valid dataframes found')
 
         if not isinstance(stream, obspy.core.Stream):
-            # empty SAM object
-            print('creating blank SAM object')
+            # empty VSEM object
+            print('creating blank VSEM object')
             return
         
         good_stream = self.check_units(stream)
@@ -810,7 +814,7 @@ class VSEM(VSAM):
             
             t = tr.times('timestamp') # Unix epoch time
             sampling_rate = tr.stats.sampling_rate
-            t = self.__reshape_trace_data(t, sampling_rate, sampling_interval)
+            t = self.reshape_trace_data(t, sampling_rate, sampling_interval)
             df['time'] = pd.Series(np.nanmin(t,axis=1))
 
             if filter:
@@ -820,18 +824,18 @@ class VSEM(VSAM):
                 tr2 = tr.copy()
                 tr2.detrend('demean')
                 tr2.filter('bandpass', freqmin=filter[0], freqmax=filter[1], corners=corners)
-                y = self.__reshape_trace_data(np.absolute(tr2.data), sampling_rate, sampling_interval)
+                y = self.reshape_trace_data(np.absolute(tr2.data), sampling_rate, sampling_interval)
             else:
-                y = self.__reshape_trace_data(np.absolute(tr.data), sampling_rate, sampling_interval)
+                y = self.reshape_trace_data(np.absolute(tr.data), sampling_rate, sampling_interval)
  
-            df['energy'] = pd.Series(np.nansum(np.square(y),axis=1)) 
+            df['energy'] = pd.Series(np.nansum(np.square(y),axis=1)/tr.stats.sampling_rate)
 
             if bands:
                 for key in bands:
                     tr2 = tr.copy()
                     [flow, fhigh] = bands[key]
                     tr2.filter('bandpass', freqmin=flow, freqmax=fhigh, corners=corners)
-                    y = self.__reshape_trace_data(abs(tr2.data), sampling_rate, sampling_interval)
+                    y = self.reshape_trace_data(abs(tr2.data), sampling_rate, sampling_interval)
                     df[key] = pd.Series(np.nansum(np.square(y),axis=1)) 
                 if 'LP' in bands and 'VT' in bands:
                     df['fratio'] = np.log2(df['VT']/df['LP'])
@@ -843,8 +847,39 @@ class VSEM(VSAM):
         st = self.to_stream('energy')
         for tr in st:
             tr.data = energy2magnitude(tr.data)
-        return EMAG(stream=st, sampling_interval=self.get_sampling_interval())
+        if len(st)>0:
+            return EMAG(stream=st, sampling_interval=st[0].stats.delta)
+        else:
+            return EMAG(stream=st)
        
+    def sum_energy(self, startt, endt, inventory, source):
+        st = self.to_stream('energy').trim(starttime=startt, endtime=endt)
+        r_km, coords = self.get_distance_km(inventory, source)
+        for tr in st:
+            r = r_km[tr.id] * 1000.0
+            s = np.nansum(tr.data)
+            s /= 75.0 # temporary kludge because i forget to use s;lng rate in VSEM coalculate befopre, when i rerun, remove this
+            s = self.eseismic(s, r)
+            m = energy2magnitude(s)
+            print(tr.id, s, m)
+
+    @staticmethod
+    def eacoustic(y, r):
+        # y must be an energy trace from VSEM
+        c = 340 # m/s
+        rho = 1.2 # kg/m3 at STP
+        E = (2 * pi * r**2) * np.sum(y) / (rho * c)
+        return E
+
+    @staticmethod
+    def eseismic(y, r):
+        # y must be an energy trace from VSEM
+        c = 2000 # m/s
+        rho = 2500 # kg/m3 at STP
+        S = 1 # site effect
+        A = 1 # inelastic attenuation fraction < 1
+        E = (2 * pi * r**2) * rho * c * np.sum(y) * S**2/A
+        return E
 
     def downsample(self, new_sampling_interval=3600):
         ''' downsample a VSEM object to a larger sampling interval(e.g. from 1 minute to 1 hour). Returns a new VSEM object.
@@ -857,7 +892,7 @@ class VSEM(VSAM):
         for id in self.dataframes:
             df = self.dataframes[id]
             df['date'] = pd.to_datetime(df['time'], unit='s')
-            old_sampling_interval = self.__get_sampling_interval(df)
+            old_sampling_interval = self.get_sampling_interval(df)
             if new_sampling_interval > old_sampling_interval:
                 freq = '%.0fmin' % (new_sampling_interval/60)
                 new_df = df.groupby(pd.Grouper(key='date', freq=freq)).sum()
