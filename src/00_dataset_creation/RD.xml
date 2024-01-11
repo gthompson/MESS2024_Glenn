@@ -1,0 +1,713 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+ <FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:iris="http://www.fdsn.org/xml/station/1/iris" xsi:schemaLocation="http://www.fdsn.org/xml/station/1 http://www.fdsn.org/xml/station/fdsn-station-1.1.xsd" schemaVersion="1.1">
+  <Source>IRIS-DMC</Source>
+  <Sender>IRIS-DMC</Sender>
+  <Module>IRIS WEB SERVICE: fdsnws-station | version: 1.1.52</Module>
+  <ModuleURI>http://service.iris.edu/fdsnws/station/1/query?startafter=2008-01-01&amp;endbefore=2010-01-01&amp;minlatitude=59.484497222222224&amp;maxlatitude=61.484497222222224&amp;minlongitude=-153.73916388888887&amp;maxlongitude=-151.73916388888887</ModuleURI>
+  <Created>2024-01-10T21:44:19.4966</Created>
+  <Network code="AK" startDate="1987-01-01T00:00:00.0000" restrictedStatus="open">
+   <Description>Alaska Regional Network ()</Description>
+   <Identifier type="DOI">10.7914/SN/AK
+   </Identifier>
+   <TotalNumberStations>319</TotalNumberStations>
+   <SelectedNumberStations>1</SelectedNumberStations>
+   <Station code="O20K" startDate="2019-12-19T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,.GREG,.UNRESTRICTED,_US-ALL,_US-TA,_US-TA-ADOPTED">
+    <Latitude>60.0815</Latitude>
+    <Longitude>-152.624</Longitude>
+    <Elevation>915.0</Elevation>
+    <Site>
+     <Name>Slope Mountain, AK, USA</Name>
+    </Site>
+    <CreationDate>2019-12-19T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>31</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+  </Network>
+  <Network code="AV" startDate="1988-01-01T00:00:00.0000" restrictedStatus="open">
+   <Description>Alaska Volcano Observatory (AVO)</Description>
+   <Identifier type="DOI">10.7914/SN/AV
+   </Identifier>
+   <TotalNumberStations>295</TotalNumberStations>
+   <SelectedNumberStations>48</SelectedNumberStations>
+   <Station code="BGL" startDate="1989-08-13T00:00:00.0000" endDate="2018-07-15T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2663</Latitude>
+    <Longitude>-152.3913</Longitude>
+    <Elevation>1127.0</Elevation>
+    <Site>
+     <Name>Barrier Glacier, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1989-08-13T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="BGR" startDate="1991-07-01T00:00:00.0000" endDate="2020-06-30T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.7569</Latitude>
+    <Longitude>-152.4199</Longitude>
+    <Elevation>985.0</Elevation>
+    <Site>
+     <Name>Barrier Glacier Two, regional station, Alaska</Name>
+    </Site>
+    <CreationDate>1991-07-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="BKG" startDate="1991-07-01T00:00:00.0000" endDate="2020-06-30T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.0696</Latitude>
+    <Longitude>-152.265</Longitude>
+    <Elevation>1009.0</Elevation>
+    <Site>
+     <Name>Blockade Glacier, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1991-07-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="CGL" startDate="1988-04-01T00:00:00.0000" endDate="2018-09-11T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.3071</Latitude>
+    <Longitude>-152.009</Longitude>
+    <Elevation>1082.0</Elevation>
+    <Site>
+     <Name>Capps Glacier, Mt. Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1988-04-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>4</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="CKL" startDate="1989-08-05T00:00:00.0000" endDate="2018-07-15T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.1934</Latitude>
+    <Longitude>-152.3401</Longitude>
+    <Elevation>1281.0</Elevation>
+    <Site>
+     <Name>Chakachamna Lake, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1989-08-05T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="CKN" startDate="2002-08-30T00:00:00.0000" endDate="2018-07-16T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2234</Latitude>
+    <Longitude>-152.1838</Longitude>
+    <Elevation>735.0</Elevation>
+    <Site>
+     <Name>Chakachatna North, Mt. Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2002-08-30T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="CKT" startDate="1992-09-15T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2002</Latitude>
+    <Longitude>-152.2085</Longitude>
+    <Elevation>975.0</Elevation>
+    <Site>
+     <Name>Chakachatna Bend, Mt. Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1992-09-15T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>4</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="CP2" startDate="1992-10-23T00:00:00.0000" endDate="2018-09-07T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2636</Latitude>
+    <Longitude>-152.2441</Longitude>
+    <Elevation>1981.0</Elevation>
+    <Site>
+     <Name>Crater Peak 2, Mt. Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1992-10-23T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>4</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="CRP" startDate="1988-04-01T00:00:00.0000" endDate="2018-09-07T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2664</Latitude>
+    <Longitude>-152.1578</Longitude>
+    <Elevation>1622.0</Elevation>
+    <Site>
+     <Name>Crater Peak, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1988-04-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>12</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="DFR" startDate="1988-08-15T00:00:00.0000" endDate="2018-07-23T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5913</Latitude>
+    <Longitude>-152.6882</Longitude>
+    <Elevation>1090.0</Elevation>
+    <Site>
+     <Name>Drift River, Redoubt, Alaska</Name>
+    </Site>
+    <CreationDate>1988-08-15T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>5</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="ILCB" startDate="2020-07-28T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED">
+    <Latitude>59.82231</Latitude>
+    <Longitude>-153.02322</Longitude>
+    <Elevation>712.0</Elevation>
+    <Site>
+     <Name>Iliamna Chinitna Bay, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2020-07-28T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="ILLG" startDate="2018-09-14T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED">
+    <Latitude>60.06885</Latitude>
+    <Longitude>-152.97855</Longitude>
+    <Elevation>975.0</Elevation>
+    <Site>
+     <Name>Iliamna Lateral Glacier, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2018-09-14T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="ILNE" startDate="2016-08-31T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED,_US-REGIONAL">
+    <Latitude>60.0573</Latitude>
+    <Longitude>-153.06354</Longitude>
+    <Elevation>1684.3</Elevation>
+    <Site>
+     <Name>Iliamna Northeast, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2016-08-31T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>9</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="ILS" startDate="1996-08-28T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>59.957</Latitude>
+    <Longitude>-153.0703</Longitude>
+    <Elevation>1125.0</Elevation>
+    <Site>
+     <Name>Iliamna South, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1996-08-28T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>11</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="ILSW" startDate="2015-08-13T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>59.9832</Latitude>
+    <Longitude>-153.1425</Longitude>
+    <Elevation>1318.0</Elevation>
+    <Site>
+     <Name>Iliamna Southwest, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2015-08-13T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="ILW" startDate="1994-09-09T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.059317</Latitude>
+    <Longitude>-153.13875</Longitude>
+    <Elevation>1676.0</Elevation>
+    <Site>
+     <Name>Iliamna West, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1994-09-09T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>18</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="INE" startDate="1990-08-29T00:00:00.0000" endDate="2016-08-31T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.0599</Latitude>
+    <Longitude>-153.0644</Longitude>
+    <Elevation>1634.0</Elevation>
+    <Site>
+     <Name>Iliamna North East, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1990-08-29T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>4</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="IVE" startDate="1996-08-29T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.0163</Latitude>
+    <Longitude>-153.0185</Longitude>
+    <Elevation>1211.9</Elevation>
+    <Site>
+     <Name>Iliamna Volcano East, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1996-08-29T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>24</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="IVS" startDate="1990-08-29T00:00:00.0000" endDate="2020-06-30T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.0086</Latitude>
+    <Longitude>-153.083</Longitude>
+    <Elevation>2332.0</Elevation>
+    <Site>
+     <Name>Iliamna Volcano Summit, Iliamna Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1990-08-29T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="N20K" startDate="2020-04-26T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,.GREG,_REALTIME,.UNRESTRICTED,_US-ALL,_US-TA,_US-TA-ADOPTED">
+    <Latitude>61.2001</Latitude>
+    <Longitude>-152.2089</Longitude>
+    <Elevation>991.0</Elevation>
+    <Site>
+     <Name>Chakachatna River, Mount Spurr, AK, USA</Name>
+     <Description>Spurr</Description>
+    </Site>
+    <CreationDate>2020-04-26T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>61</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="NCG" startDate="2005-11-01T00:00:00.0000" endDate="2018-07-15T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.4031</Latitude>
+    <Longitude>-152.159</Longitude>
+    <Elevation>1244.0</Elevation>
+    <Site>
+     <Name>North Capps Glacier, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2005-11-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>2</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="NCT" startDate="1988-08-14T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5621</Latitude>
+    <Longitude>-152.9293</Longitude>
+    <Elevation>1136.0</Elevation>
+    <Site>
+     <Name>North Crescent, Redoubt Volcano, Alaska</Name>
+     <Description>Redoubt</Description>
+    </Site>
+    <CreationDate>1988-08-14T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>14</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="OPT" startDate="2005-11-01T00:00:00.0000" endDate="2020-06-30T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.EARTHSCOPE,.UNRESTRICTED,_US-ALL,_US-REGIONAL,_US-TA,.VOLCANO">
+    <Latitude>59.6526</Latitude>
+    <Longitude>-153.2321</Longitude>
+    <Elevation>602.0</Elevation>
+    <Site>
+     <Name>Oil Point, Regional Station, Alaska</Name>
+    </Site>
+    <CreationDate>2005-11-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="P19K" startDate="2020-04-26T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,.GREG,.UNRESTRICTED,_US-ALL,_US-TA,_US-TA-ADOPTED">
+    <Latitude>59.6524</Latitude>
+    <Longitude>-153.2319</Longitude>
+    <Elevation>629.0</Elevation>
+    <Site>
+     <Name>Oil Pt, AK, USA</Name>
+    </Site>
+    <CreationDate>2020-04-26T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>61</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RD01" startDate="2009-03-21T00:00:00.0000" endDate="2009-06-10T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED">
+    <Latitude>60.4885</Latitude>
+    <Longitude>-152.7031</Longitude>
+    <Elevation>1831.0</Elevation>
+    <Site>
+     <Name>Broadband 01, Redoubt, Alaska</Name>
+    </Site>
+    <CreationDate>2009-03-21T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RD02" startDate="2009-03-20T00:00:00.0000" endDate="2009-06-11T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED">
+    <Latitude>60.5208</Latitude>
+    <Longitude>-152.7376</Longitude>
+    <Elevation>1401.0</Elevation>
+    <Site>
+     <Name>Broadband 02, Redoubt, Alaska</Name>
+    </Site>
+    <CreationDate>2009-03-20T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RD03" startDate="2009-03-20T00:00:00.0000" endDate="2009-06-11T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED">
+    <Latitude>60.4705</Latitude>
+    <Longitude>-152.8201</Longitude>
+    <Elevation>1607.0</Elevation>
+    <Site>
+     <Name>Broadband 03, Redoubt, Alaska</Name>
+    </Site>
+    <CreationDate>2009-03-20T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDDF" startDate="2010-10-11T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5912</Latitude>
+    <Longitude>-152.6883</Longitude>
+    <Elevation>1134.0</Elevation>
+    <Site>
+     <Name>Drift River, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2010-10-11T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>8</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDDR" startDate="2009-07-01T00:00:00.0000" endDate="2020-06-30T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5843</Latitude>
+    <Longitude>-152.5887</Longitude>
+    <Elevation>905.0</Elevation>
+    <Site>
+     <Name>Drift River, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2009-07-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>2</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDE" startDate="2009-02-04T00:00:00.0000" endDate="2009-07-03T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5869</Latitude>
+    <Longitude>-152.5925</Longitude>
+    <Elevation>571.0</Elevation>
+    <Site>
+     <Name>East, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2009-02-04T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>1</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDJH" startDate="2009-02-04T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5905</Latitude>
+    <Longitude>-152.8058</Longitude>
+    <Elevation>1414.0</Elevation>
+    <Site>
+     <Name>Juergen&apos;s Hut, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2009-02-04T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>9</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDSO" startDate="2011-08-29T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.4536</Latitude>
+    <Longitude>-152.7453</Longitude>
+    <Elevation>1556.9</Elevation>
+    <Site>
+     <Name>South, Redoubt Volcano, Alaska</Name>
+     <Description>Redoubt</Description>
+     <Town>Drift River</Town>
+     <Region>Alaska</Region>
+     <Country>USA</Country>
+    </Site>
+    <CreationDate>2011-08-29T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>10</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDT" startDate="1988-04-01T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.5726</Latitude>
+    <Longitude>-152.4079</Longitude>
+    <Elevation>945.0</Elevation>
+    <Site>
+     <Name>Redoubt, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1988-04-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>9</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDW" startDate="2005-11-01T00:00:00.0000" endDate="2009-07-01T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.4821</Latitude>
+    <Longitude>-152.81</Longitude>
+    <Elevation>1813.0</Elevation>
+    <Site>
+     <Name>West, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2005-11-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RDWB" startDate="2009-02-24T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.486807</Latitude>
+    <Longitude>-152.843634</Longitude>
+    <Elevation>1659.0</Elevation>
+    <Site>
+     <Name>West Buttress, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>2009-02-24T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>12</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RED" startDate="1988-04-01T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.4196</Latitude>
+    <Longitude>-152.7742</Longitude>
+    <Elevation>1071.0</Elevation>
+    <Site>
+     <Name>Redoubt Volcano, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1988-04-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>18</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="REF" startDate="1990-03-14T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.4888</Latitude>
+    <Longitude>-152.694</Longitude>
+    <Elevation>1641.0</Elevation>
+    <Site>
+     <Name>East Flank, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1990-03-14T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>20</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="RSO" startDate="1990-03-01T00:00:00.0000" endDate="2018-09-10T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>60.4616</Latitude>
+    <Longitude>-152.756</Longitude>
+    <Elevation>1921.0</Elevation>
+    <Site>
+     <Name>South, Redoubt Volcano, Alaska</Name>
+    </Site>
+    <CreationDate>1990-03-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>4</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPBG" startDate="2004-09-09T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2591</Latitude>
+    <Longitude>-152.3722</Longitude>
+    <Elevation>1087.0</Elevation>
+    <Site>
+     <Name>Barrier Glacier, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2004-09-09T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>6</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPBL" startDate="2018-09-05T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED">
+    <Latitude>61.3764</Latitude>
+    <Longitude>-151.8947</Longitude>
+    <Elevation>927.0</Elevation>
+    <Site>
+     <Name>Spurr Beluga Lake, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2018-09-05T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPCG" startDate="2004-09-08T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.2913</Latitude>
+    <Longitude>-152.0228</Longitude>
+    <Elevation>1329.0</Elevation>
+    <Site>
+     <Name>Capps Glacier, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2004-09-08T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>12</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPCL" startDate="2018-07-12T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED">
+    <Latitude>61.1956</Latitude>
+    <Longitude>-152.3399</Longitude>
+    <Elevation>1274.0</Elevation>
+    <Site>
+     <Name>Chakachamna Lake, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2018-07-12T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>3</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPCN" startDate="2010-09-01T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.223675</Latitude>
+    <Longitude>-152.18403</Longitude>
+    <Elevation>733.3</Elevation>
+    <Site>
+     <Name>Chakachatna North, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2010-09-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>6</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPCP" startDate="2010-10-02T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.265465</Latitude>
+    <Longitude>-152.155495</Longitude>
+    <Elevation>1640.0</Elevation>
+    <Site>
+     <Name>Crater Peak Broadband, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2010-10-02T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>7</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPCR" startDate="2004-09-08T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,.EARTHSCOPE,.UNRESTRICTED,_US-ALL,_US-REGIONAL,_US-TA,.VOLCANO">
+    <Latitude>61.2003</Latitude>
+    <Longitude>-152.2091</Longitude>
+    <Elevation>984.0</Elevation>
+    <Site>
+     <Name>Chakachatna River, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2004-09-08T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>6</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPNN" startDate="2011-07-31T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.3662</Latitude>
+    <Longitude>-152.7012</Longitude>
+    <Elevation>1166.0</Elevation>
+    <Site>
+     <Name>North Nagishlamina, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2011-07-31T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>6</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPU" startDate="1988-04-01T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.1811</Latitude>
+    <Longitude>-152.0566</Longitude>
+    <Elevation>800.0</Elevation>
+    <Site>
+     <Name>Mount Spurr, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>1988-04-01T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>9</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="SPWE" startDate="2004-08-17T00:00:00.0000" restrictedStatus="open" iris:alternateNetworkCodes="_ARCTIC,_REALTIME,.UNRESTRICTED,_US-REGIONAL,.VOLCANO">
+    <Latitude>61.27346</Latitude>
+    <Longitude>-152.559</Longitude>
+    <Elevation>1317.0</Elevation>
+    <Site>
+     <Name>Spurr West, Mount Spurr, Alaska</Name>
+    </Site>
+    <CreationDate>2004-08-17T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>9</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+  </Network>
+  <Network code="GM" startDate="2016-01-01T00:00:00.0000" restrictedStatus="open">
+   <Description>U.S. Geological Survey Networks ()</Description>
+   <Identifier type="DOI">10.7914/SN/GM
+   </Identifier>
+   <TotalNumberStations>156</TotalNumberStations>
+   <SelectedNumberStations>1</SelectedNumberStations>
+   <Station code="AD07" startDate="2018-12-03T00:00:00.0000" endDate="2019-05-10T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".UNRESTRICTED">
+    <Latitude>59.779942</Latitude>
+    <Longitude>-151.836594</Longitude>
+    <Elevation>40.0</Elevation>
+    <Site>
+     <Name>Anchor Point Fire Station</Name>
+     <Description>72440 Milo Fritz Ave</Description>
+     <Town>Anchor Point</Town>
+     <Region>AK</Region>
+    </Site>
+    <CreationDate>2018-12-03T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>29</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+  </Network>
+  <Network code="TA" startDate="2003-01-01T00:00:00.0000" restrictedStatus="open">
+   <Description>USArray Transportable Array (EarthScope_TA)</Description>
+   <Identifier type="DOI">10.7914/SN/TA
+   </Identifier>
+   <TotalNumberStations>1893</TotalNumberStations>
+   <SelectedNumberStations>3</SelectedNumberStations>
+   <Station code="N20K" startDate="2015-08-14T00:00:00.0000" endDate="2020-04-25T23:59:59.9999" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,.UNRESTRICTED,_US-ALL,_US-TA">
+    <Latitude>61.2001</Latitude>
+    <Longitude>-152.2089</Longitude>
+    <Elevation>991.0</Elevation>
+    <Site>
+     <Name>Mount Spurr, AK, USA</Name>
+    </Site>
+    <CreationDate>2015-08-14T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>102</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="O20K" startDate="2015-06-24T00:00:00.0000" endDate="2019-12-18T23:59:59.9999" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,.UNRESTRICTED,_US-ALL,_US-TA">
+    <Latitude>60.0815</Latitude>
+    <Longitude>-152.624</Longitude>
+    <Elevation>915.0</Elevation>
+    <Site>
+     <Name>Slope Mountain, AK, USA</Name>
+    </Site>
+    <CreationDate>2015-06-24T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>53</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="P19K" startDate="2015-06-24T00:00:00.0000" endDate="2020-04-25T23:59:59.9999" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,.UNRESTRICTED,_US-ALL,_US-TA">
+    <Latitude>59.6524</Latitude>
+    <Longitude>-153.2319</Longitude>
+    <Elevation>629.0</Elevation>
+    <Site>
+     <Name>Oil Pt, AK, USA</Name>
+    </Site>
+    <CreationDate>2015-06-24T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>91</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+  </Network>
+  <Network code="ZE" startDate="2015-01-01T00:00:00.0000" endDate="2017-12-31T23:59:59.9999" restrictedStatus="open">
+   <Description>Southern Alaska Lithosphere and Mantle Observation Network (SALMON)</Description>
+   <Identifier type="DOI">10.7914/SN/ZE_2015
+   </Identifier>
+   <TotalNumberStations>28</TotalNumberStations>
+   <SelectedNumberStations>7</SelectedNumberStations>
+   <Station code="HARR" startDate="2015-05-16T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.3969</Latitude>
+    <Longitude>-152.242401</Longitude>
+    <Elevation>68.0</Elevation>
+    <Site>
+     <Name>Harriet Point, Alaska</Name>
+    </Site>
+    <CreationDate>2015-05-16T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>20</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="HLC1" startDate="2015-07-20T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.443001</Latitude>
+    <Longitude>-152.568497</Longitude>
+    <Elevation>641.0</Elevation>
+    <Site>
+     <Name>Lake Clark 1, Alaska</Name>
+    </Site>
+    <CreationDate>2015-07-20T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>40</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="HLC2" startDate="2015-07-19T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.5756</Latitude>
+    <Longitude>-153.082703</Longitude>
+    <Elevation>718.0</Elevation>
+    <Site>
+     <Name>Lake Clark 2, Alaska</Name>
+    </Site>
+    <CreationDate>2015-07-19T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>40</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="HLC3" startDate="2015-07-18T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.6012</Latitude>
+    <Longitude>-153.276794</Longitude>
+    <Elevation>453.0</Elevation>
+    <Site>
+     <Name>Lake Clark 3, Alaska</Name>
+    </Site>
+    <CreationDate>2015-07-18T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>20</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="HLC4" startDate="2015-07-16T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.665798</Latitude>
+    <Longitude>-153.7099</Longitude>
+    <Elevation>932.0</Elevation>
+    <Site>
+     <Name>Lake Clark 4, Alaska</Name>
+    </Site>
+    <CreationDate>2015-07-16T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>40</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="KALN" startDate="2015-05-17T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.500599</Latitude>
+    <Longitude>-151.8871</Longitude>
+    <Elevation>55.0</Elevation>
+    <Site>
+     <Name>Kalgin Island North, Alaska</Name>
+    </Site>
+    <CreationDate>2015-05-17T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>20</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+   <Station code="KALS" startDate="2015-05-16T00:00:00.0000" endDate="2017-07-17T23:59:59.0000" restrictedStatus="open" iris:alternateNetworkCodes=".EARTHSCOPE,_PASSCAL,.UNRESTRICTED,_US-ALL,_US-FA">
+    <Latitude>60.360401</Latitude>
+    <Longitude>-152.073196</Longitude>
+    <Elevation>32.0</Elevation>
+    <Site>
+     <Name>Kalgin Island South, Alaska</Name>
+    </Site>
+    <CreationDate>2015-05-16T00:00:00.0000</CreationDate>
+    <TotalNumberChannels>20</TotalNumberChannels>
+    <SelectedNumberChannels>0</SelectedNumberChannels>
+   </Station>
+  </Network>
+ </FDSNStationXML>
