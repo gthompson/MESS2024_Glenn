@@ -29,7 +29,6 @@ class SAM:
                     frequency ratio by Rodgers et al. (2015).
         '''
         self.dataframes = {} 
-        #self.trace_ids = []
 
         if isinstance(dataframes, dict):
             good_dataframes = {}
@@ -59,7 +58,6 @@ class SAM:
                     df['time'] = pd.Series(tr.times('timestamp'))
                     df['mean'] = pd.Series(tr.data) 
                     self.dataframes[tr.id] = df
-                    #self.trace_ids.append(tr.id)  
                 return 
             elif good_stream[0].stats.sampling_rate < 1/sampling_interval:
                 print('error: cannot compute SAM for a Stream with a tr.stats.delta bigger than requested sampling interval')
@@ -82,7 +80,23 @@ class SAM:
                     #print(f"{tr}: bad sampling rate. Skipping.")
                     continue
                 tr2 = tr.copy()
-                tr2.detrend('demean')
+                try:
+                    tr2.detrend('demean')
+                except Exception as e: # sometimes crashes here because tr2.data is a masked array
+                    print(e)
+                    if isinstance(tr2.data, np.ma.MaskedArray):
+                        try:
+                            m = np.ma.getmask(tr2.data)
+                            tr2.data = tr2.data.filled(fill_value=0)
+                            tr2.detrend('demean')
+                            tr2.data = tr2.data.filled(fill_value=0)
+                        except Exception as e2:
+                            print(e2)
+                            continue
+                    else: # not a masked array
+                        continue
+                        
+                    
                 tr2.filter('bandpass', freqmin=filter[0], freqmax=filter[1], corners=corners)
                 y = self.reshape_trace_data(np.absolute(tr2.data), sampling_rate, sampling_interval)
             else:
@@ -180,8 +194,11 @@ class SAM:
                 print('METRIC: ',m)
                 st = self.to_stream(metric=m)
                 if outfile:
-                    this_outfile = outfile.replace('.png', f"_{m}.png")
-                    st.plot(equal_scale=equal_scale, outfile=this_outfile);
+                    if not m in outfile:
+                        this_outfile = outfile.replace('.png', f"_{m}.png")
+                        st.plot(equal_scale=equal_scale, outfile=this_outfile);
+                    else:
+                        st.plot(equal_scale=equal_scale, outfile=outfile);
                 else:
                     st.plot(equal_scale=equal_scale);
             return
@@ -241,24 +258,24 @@ class SAM:
             trace_ids = []
             for year in range(startt.year, endt.year+1):
                 samfilepattern = classref.get_filename(SAM_DIR, '*', year, sampling_interval, ext)
-                print(samfilepattern)
+                #print(samfilepattern)
                 samfiles = glob.glob(samfilepattern)
-                print(samfiles)
+                #print(samfiles)
                 #samfiles = glob.glob(os.path.join(SAM_DIR,'SAM_*_[0-9][0-9][0-9][0-9]_%ds.%s' % (sampling_interval, ext )))
                 for samfile in samfiles:
                     parts = samfile.split('_')
                     trace_ids.append(parts[-3])
             trace_ids = list(set(trace_ids)) # makes unique
-            print(trace_ids)
+            #print(trace_ids)
         
         for id in trace_ids:
             df_list = []
             for yyyy in range(startt.year, endt.year+1):
                 samfile = classref.get_filename(SAM_DIR, id, yyyy, sampling_interval, ext)
-                print(samfile)
+                #print(samfile)
                 #samfile = os.path.join(SAM_DIR,'SAM_%s_%4d_%ds.%s' % (id, yyyy, sampling_interval, ext))
                 if os.path.isfile(samfile):
-                    print('Reading ',samfile)
+                    #print('Reading ',samfile)
                     if ext=='csv':
                         df = pd.read_csv(samfile, index_col=False)
                     elif ext=='pickle':
@@ -276,7 +293,6 @@ class SAM:
                 dataframes[id] = df_list[0]
             elif len(df_list)>1:
                 dataframes[id] = pd.concat(df_list)
-            #self.trace_ids.append(id)   
                 
         samObj = classref(dataframes=dataframes) # create SAM object         
         return samObj
@@ -546,7 +562,6 @@ class SAM:
             metrics=self.get_metrics()
             if len(self.dataframes[id])==0 or (self.dataframes[id][metrics[0]] == 0).all() or (pd.isna(self.dataframes[id][metrics[0]])).all():
                 del dfs_dict[id]
-                self.trace_ids.remove(id)
         self.dataframes = dfs_dict
 
     @staticmethod
@@ -799,7 +814,6 @@ class VSEM(VSAM):
                     df['time'] = pd.Series(tr.times('timestamp'))
                     df['mean'] = pd.Series(tr.data) 
                     self.dataframes[tr.id] = df
-                    #self.trace_ids.append(tr.id)  
                 return 
             elif good_stream[0].stats.sampling_rate < 1/sampling_interval:
                 print('error: cannot compute SAM for a Stream with a tr.stats.delta bigger than requested sampling interval')
@@ -1180,6 +1194,37 @@ def energy2magnitude(eng, a=-4.7, b=2/3):
     
     mag = b * (np.log10(eng) + a) 	
     return mag
+
+def wrapper_read_select_downsample_plot(SAM_DIR, starttime, endtime, sampling_interval=60, samclass='RSAM', metric='median', verticals_only=True, \
+          downsample=False, npts=100, savefig=False):
+    samobj = eval(samclass).read(starttime, endtime, SAM_DIR=SAM_DIR)
+    if verticals_only:
+        samobj = samobj.select(component='Z')
+    if downsample:
+        sampling_interval = int((endtime - starttime) / npts)
+        samobj = samobj.downsample(new_sampling_interval=sampling_interval)
+    if savefig:
+        print(samobj)
+        st = samobj.to_stream()
+        print(st)
+        net = st[0].stats.network
+        pngfile = f"{samclass}.{net}.{starttime.strftime('%Y%m%d')}.{endtime.strftime('%Y%m%d')}.{sampling_interval}.{metric}.png"
+        if isinstance(savefig, str):
+            if os.path.isdir(savefig):
+                pngfile = os.path.join(savefig, pngfile)
+        print(f'Plotting to {pngfile}')
+        samobj.plot(metrics=metric, outfile=pngfile) 
+    else:
+        samobj.plot(metrics=metric)   
+
+def wrapper_read_select_downsample_plot_all_samclasses(SAM_DIR, starttime, endtime, sampling_interval=60, metric='median', verticals_only=True, \
+                        downsample=False, npts=100, savefig=False):
+    for samclass in ['RSAM', 'VSAM', 'VSEM', 'DSAM']:
+        thismetric = metric
+        if samclass=='VSEM':
+            thismetric = 'energy'
+        wrapper_read_select_downsample_plot(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass=samclass, metric=thismetric, \
+                                            verticals_only=verticals_only, downsample=downsample, npts=npts, savefig=savefig)
     
 if __name__ == "__main__":
     pass

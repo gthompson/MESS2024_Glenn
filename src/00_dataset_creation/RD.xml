@@ -5,7 +5,7 @@
   <Sender>IRIS-DMC</Sender>
   <Module>IRIS WEB SERVICE: fdsnws-station | version: 1.1.52</Module>
   <ModuleURI>http://service.iris.edu/fdsnws/station/1/query?startafter=2008-01-01&amp;endbefore=2010-01-01&amp;minlatitude=59.484497222222224&amp;maxlatitude=61.484497222222224&amp;minlongitude=-153.73916388888887&amp;maxlongitude=-151.73916388888887</ModuleURI>
-  <Created>2024-01-10T21:44:19.4966</Created>
+  <Created>2024-01-11T03:20:27.5978</Created>
   <Network code="AK" startDate="1987-01-01T00:00:00.0000" restrictedStatus="open">
    <Description>Alaska Regional Network ()</Description>
    <Identifier type="DOI">10.7914/SN/AK
