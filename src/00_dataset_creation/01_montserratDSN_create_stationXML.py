@@ -20,6 +20,10 @@ LIB_DIR = os.path.join(paths['PROJECT_DIR'],'src','lib')
 sys.path.append(LIB_DIR)
 import InventoryTools
 
+stationXMLfile = os.path.join(paths['RESPONSE_DIR'], 'MV.xml')
+if os.path.isfile(stationXMLfile):
+    exit()
+
 # parse Seisan STATION0.HYP file to get station coordinates
 coordinates={}
 station0hypfile = '/data/SEISAN_DB/STATION0_MVO.HYP'
@@ -75,10 +79,9 @@ for xmlfile in stationXMLfiles:
     else:
         invAll = this_inv
         
-invAll.write(os.path.join(paths['RESPONSE_DIR'], 'MV.xml'), format='stationxml')
+invAll.write(stationXMLfile, format='stationxml')
 
 #invAll.get_channel_metadata('MV.MBBE..BHE')
 #trace_ids = InventoryTools.inventory2traceid(invAll, force_location_code='')
-
 #print(trace_ids)
 

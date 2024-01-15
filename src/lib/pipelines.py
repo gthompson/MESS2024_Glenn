@@ -17,7 +17,7 @@ from obspy.clients.filesystem.sds import Client as sdsclient
 from obspy.core.inventory.inventory import read_inventory
 import SDS
 import InventoryTools
-from SAM import RSAM, VSAM, VSEM, DSAM #, VR, VRS, ER, ERS, DR, DRS
+from SAM import RSAM, VSAM, VSEM, DSAM, ER, DR, DRS
 secondsPerDay = 60 * 60 * 24
 
 def sds2db(dboutday, SDS_DIR, jday):
@@ -149,7 +149,7 @@ def compute_SDS_VEL(paths, startTime, endTime, invfile=None):
 def compute_SDS_DISP(paths, startTime, endTime, invfile=None):
     compute_SDS_corrected(paths, startTime, endTime, invfile=invfile, kind='DISP')
     
-def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL'):
+def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL', net=None):
     print(f"compute_SDS_corrected: invfile = {invfile}")
     if kind!='VEL' and kind!='DISP':
         print('must specify whether to correct to VEL or DISP')
@@ -168,7 +168,7 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL'):
     while daytime < endTime:     
         print(f'Loading Stream data for {daytime}')
         #st = mySDSreadClient.get_waveforms("MV", "*", "*", "[SBEHCD]*", daytime-taperSecs, daytime+secondsPerDay+taperSecs)
-        rawSDSclient.read(daytime, daytime+secondsPerDay)
+        rawSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
         st = rawSDSclient.stream
         st.merge(method=0, fill_value=0)
         print(st)    
@@ -193,7 +193,7 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL'):
         daytime += secondsPerDay 
 
                
-def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=True, do_VSEM=True, net=None):       
+def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=True, do_VSEM=True, net=None):      
     # read SDS_VEL, write VSAM, VSEM data
     #velSDSclient = sdsclient(paths['SDS_DIR'])
     velSDSclient = SDS.SDSobj(paths['SDS_VEL_DIR'], sds_type='D', format='MSEED')
@@ -202,7 +202,7 @@ def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=
     if do_VSAM or do_VSEM:
         while daytime < endt:
             print(f'Loading Stream data for {daytime}')
-            velSDSclient.read(daytime, daytime+secondsPerDay)
+            velSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
             st = velSDSclient.stream
             for tr in st:
                 if tr.stats.channel[1]=='H':
@@ -240,7 +240,7 @@ def compute_displacement_metrics(paths, startt, endt, sampling_interval=60, do_D
     if do_DSAM:
         while daytime < endt:
             print(f'Loading Stream data for {daytime}')
-            dispSDSclient.read(daytime, daytime+secondsPerDay)
+            dispSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
             st = dispSDSclient.stream
             for tr in st:
                 if tr.stats.channel[1]=='H':
@@ -260,35 +260,41 @@ def compute_displacement_metrics(paths, startt, endt, sampling_interval=60, do_D
     del dispSDSclient    
 
 
-def reduce_to_1km(paths, year, do_VR=False, do_VRS=False, do_ER=True, do_ERS=True, do_DR=True, do_DRS=True, sampling_interval=60, invfile=None, source=None, Q=None, ext='pickle'):
+def reduce_to_1km(paths, year, do_VR=False, do_VRS=False, do_ER=True, do_DR=True, do_DRS=True, sampling_interval=60, invfile=None, source=None, Q=None, ext='pickle'):
     startTime = obspy.core.UTCDateTime(year,1,1)
     endTime = obspy.core.UTCDateTime(year,12,31,23,59,59.9)
+    inv = None
+    if invfile:
+        if os.path.isfile(invfile):
+            inv = read_inventory(invfile)
+    if not inv:
+        return
+    if not source:
+        return
+    
 
     if do_VR or do_VRS:
         vsamObj = VSAM.read(startTime, endTime, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)
         if do_VR:
-            VRobj = vsamObj.reduce(invMVO, source, surfaceWaves=False, Q=Q)
+            VRobj = vsamObj.compute_reduced_velocity(inv, source, surfaceWaves=False, Q=Q)
             VRobj.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
         if do_VRS:
-            VRSobj = vsamObj.reduce(invMVO, source, surfaceWaves=True, Q=Q)
+            VRSobj = vsamObj.compute_reduced_velocity(inv, source, surfaceWaves=True, Q=Q)
             VRSobj.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)        
 
     if do_ER or do_ERS:
         vsemObj = VSEM.read(startTime, endTime, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)
         if do_ER:
-            ERobj = vsemObj.reduce(invMVO, source, surfaceWaves=False, Q=Q)
+            ERobj = vsemObj.compute_reduced_energy(inv, source, Q=Q)
             ERobj.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
-        if do_ER:
-            ERSobj = vsemObj.reduce(invMVO, source, surfaceWaves=True, Q=Q)
-            ERSobj.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
             
     if do_DR or do_DRS:
         dsamObj = DSAM.read(startTime, endTime, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)
         if do_DR:
-            DRobj = dsamObj.reduce(invMVO, source, surfaceWaves=False, Q=Q)
+            DRobj = dsamObj.compute_reduced_displacement(inv, source, surfaceWaves=False, Q=None)
             DRobj.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)
         if do_DRS:
-            DRSobj = dsamObj.reduce(invMVO, source, surfaceWaves=True, Q=Q)
+            DRSobj = dsamObj.compute_reduced_displacement(inv, source, surfaceWaves=True, Q=None)
             DRSobj.write(SAM_DIR=paths['SAM_DIR'], overwrite=True)        
 
 # need to ensure there is a reduce method for VSAM, VSEM, DSAM. Should be different for VSEM - use Boatwright formulas.
@@ -296,34 +302,97 @@ def reduce_to_1km(paths, year, do_VR=False, do_VRS=False, do_ER=True, do_ERS=Tru
 # when loading SDS_VEL or SDS_DISP should probably fix units for "?H?" to m/s or m respectively, or "Pa" for "?D?"
 
 
-def small_sausage(paths, startt, endt, sampling_interval=60, source=None, invfile=None, Q=None, ext='pickle', net=None):
-    compute_raw_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_RSAM=True, net=net)
+def small_sausage(paths, startt, endt, sampling_interval=60, source=None, invfile=None, Q=None, ext='pickle', net=None, do_metric=None):
+    if not do_metric:
+        do_metric = check_what_to_do(paths, net, startt, endt, sampling_interval=sampling_interval, ext=ext, invfile=invfile)
+    if do_metric['RSAM']:
+        compute_raw_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_RSAM=True, net=net)
+
     print(f"invfile={invfile}")
     if invfile and os.path.isfile(invfile):
-        print('Calling compute_SDS_VEL')
-        compute_SDS_VEL(paths, startt, endt, invfile=invfile)
-        print('Calling compute_SDS_DISP')
-        compute_SDS_DISP(paths, startt, endt, invfile=invfile)
+
+        if do_metric['SDS_VEL']:
+            print('Calling compute_SDS_VEL')
+            compute_SDS_VEL(paths, startt, endt, invfile=invfile)
+
+        if do_metric['SDS_DISP']:
+            print('Calling compute_SDS_DISP')
+            compute_SDS_DISP(paths, startt, endt, invfile=invfile)
+
         print('Calling compute_velocity_metrics')
-        compute_velocity_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_VSAM=True, do_VSEM=True, net=net) 
+        compute_velocity_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_VSAM=do_metric['VSAM'], \
+                                 do_VSEM=do_metric['VSEM'], net=net) 
+
         print('Calling compute_displacement_metrics')    
-        compute_displacement_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_DSAM=True, net=net) 
+        compute_displacement_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_DSAM=do_metric['DSAM'], net=net) 
+    
         if source:   
-            pass
-            if isinstance(sampling_interval, list):
-            	for delta in sampling_interval:
-                    reduce_to_1km(paths, year, do_VR=False, do_VRS=False, do_ER=True, do_ERS=True, do_DR=True, do_DRS=True, sampling_interval=delta, invfile=invfile, source=source, Q=Q, ext=ext)
-            else:
-                reduce_to_1km(paths, year, do_VR=False, do_VRS=False, do_ER=True, do_ERS=True, do_DR=True, do_DRS=True, sampling_interval=sampling_interval, invfile=invfile, source=source, Q=Q, ext=ext)
+            if not isinstance(sampling_interval, list):
+                sampling_interval = [sampling_interval]
+            for delta in sampling_interval:
+                reduce_to_1km(paths, startt.year, do_ER=do_metric['ER'], do_DR=do_metric['DR'], do_DRS=do_metric['DRS'], sampling_interval=delta, invfile=invfile, source=source, Q=Q, ext=ext)
 
+def big_sausage(seisandbdir, paths, startt, endt, sampling_interval=60, source=None, invfile=None, Q=None, \
+                ext='pickle', dbout=None, round_sampling_rate=True, net=None, do_metric=None):
+    # includes everything in small sausage, but with a Seisan to SDS conversion first. For Montserrat only
 
-def big_sausage(seisandbdir, paths, startt, endt, sampling_interval=60, source=None, invfile=None, Q=None, ext='pickle', dbout=None, round_sampling_rate=True, net=None):
-    # includes everything in small sausage, but with a Seisan to SDS conversion first
-    seisandb2SDS(seisandbdir, paths['SDS_DIR'], startt, endt, dbout, round_sampling_rate=round_sampling_rate)
-     
+    if not do_metric:
+        do_metric = check_what_to_do(paths, net, startt, endt, sampling_interval=sampling_interval, ext=ext, invfile=invfile)
+
+    if do_metric['SDS_RAW']:
+        seisandb2SDS(seisandbdir, paths['SDS_DIR'], startt, endt, dbout, round_sampling_rate=round_sampling_rate)
+    
     # small sauage stuff
-    small_sausage(paths, startt, endt, sampling_interval=sampling_interval, source=source, invfile=invfile, Q=Q, ext=ext, net=net)
-   
+    small_sausage(paths, startt, endt, sampling_interval=sampling_interval, source=source, invfile=invfile, Q=Q,\
+                ext=ext, net=net, do_metric=do_metric)
+
+def check_what_to_do(paths, net, startt, endt, sampling_interval=60, ext='pickle', invfile=None):
+    # check that derived data created by small or big sausage exist
+
+    do_metric = {}
+
+    # Check inventory exists in StationXML
+    if not invfile:
+        invfile = os.path.join(paths['RESPONSE_DIR'],f"{net}.xml")
+    do_metric['inventory'] = True
+    if os.path.isfile(invfile):
+        do_metric['inventory'] = False
+        
+    # Check raw SDS data exist
+    rawSDSclient = SDS.SDSobj(paths['SDS_DIR'], sds_type='D', format='MSEED') 
+    rawSDSclient.read(startt, endt, fixnet=net)
+    do_metric['SDS_RAW']=True
+    if len(rawSDSclient.stream)>0:
+        if rawSDSclient.stream[0].stats.npts>0:
+            do_metric['SDS_RAW']=False
+
+    # Check SDS_VEL data exist
+    velSDSclient = SDS.SDSobj(paths['SDS_VEL_DIR'], sds_type='D', format='MSEED') 
+    velSDSclient.read(startt, endt, fixnet=net)
+    do_metric['SDS_VEL']=True
+    if len(velSDSclient.stream)>0:
+        if velSDSclient.stream[0].stats.npts>0:
+            do_metric['SDS_VEL']=False
+
+    # Check SDS_DISP data exist
+    dispSDSclient = SDS.SDSobj(paths['SDS_DISP_DIR'], sds_type='D', format='MSEED') 
+    dispSDSclient.read(startt, endt, fixnet=net)
+    do_metric['SDS_DISP']=True
+    if len(dispSDSclient.stream)>0:
+        if dispSDSclient.stream[0].stats.npts>0:
+            do_metric['SDS_DISP']=False
+
+    # Check SAM data exist
+    for samtype in ['RSAM', 'VSAM', 'VSEM', 'DSAM', 'DR', 'DRS', 'ER']:
+        do_metric[samtype] = True
+        samobj = eval(f"{samtype}.read(startt, endt, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)")
+        for seed_id in samobj.dataframes:
+            df = samobj.dataframes[seed_id]
+            if len(df)>0:
+                do_metric[samtype] = False
+        
+    return do_metric
+
 if __name__ == "__main__":
     import setup_paths
     paths = setup_paths.paths
@@ -333,6 +402,7 @@ if __name__ == "__main__":
     invfile = os.path.join(paths['RESPONSE_DIR'],f"{net}.xml")
     startt = obspy.core.UTCDateTime(2001, 7, 28, 0, 0, 0)
     endt = obspy.core.UTCDateTime(2001, 7, 31, 0, 0, 0)
+    #sampling_interval = [2.56, 60, 600]
     sampling_interval= 10 # seconds # can also be a list of different sampling rates, e.g. [2.56, 60, 600] to mimic original RSAM system. 
     # For VT band (4-18 Hz), 2.56s is fine (10 cycles+)
     # For LP band (0.5 - 4 Hz), 2.56s might work (1.25 cycles+), but 10s might be better (5 cycles+), and 60s would be amazing (30 cycles+)
@@ -343,5 +413,10 @@ if __name__ == "__main__":
     Q = None
     ext = 'pickle'
 
-    big_sausage(seisandbdir, paths, startt, endt, sampling_interval=sampling_interval, source=source, invfile=invfile, Q=Q, ext=ext, dbout=dbout, round_sampling_rate=True, net=net)
+    do_metric = check_what_to_do(paths, net, startt, endt, sampling_interval=sampling_interval, ext=ext)
+
+    big_sausage(seisandbdir, paths, startt, endt, sampling_interval=sampling_interval, source=source, \
+                invfile=invfile, Q=Q, ext=ext, dbout=dbout, round_sampling_rate=True, net=net, do_metric=do_metric)
     # looks like MBLY supposed to be 100 Hz, so by forcing it to 75 Hz, I am messing it up. So replacing 75.0 with np.round(tr.stats.sampling_rate, 0) should fix this.
+
+    

@@ -5,7 +5,7 @@ sys.path.append('../lib')
 import setup_paths
 paths=setup_paths.paths
 import obspy
-from urllib.request import urlretrieve
+
 lat = 60 + 29/60 + 4.19/3600
 lon = - (152 + 44/60 + 20.99/3600)
 source = {'lat':lat, 'lon':lon}
@@ -14,13 +14,6 @@ net = 'RD'
 invfile = os.path.join(paths['RESPONSE_DIR'],f"{net}.xml")
 sdate = obspy.core.UTCDateTime(2008,1,1)
 edate = obspy.core.UTCDateTime(2010,1,1)
-
-'''
-server = "service.iris.edu"
-url = f"https://{server}/fdsnws/station/1/query?starttime={sdate.isoformat() }&endtime={edate.isoformat() }&latitude={source['lat']}&longitude={source['lon']}&maxradius={maxRadius}"
-print(url)
-urlretrieve(url=url, filename=invfile)
-'''
 
 from obspy.clients.fdsn.client import Client
 client = Client("IRIS")

@@ -19,7 +19,7 @@ class SDSobj():
         self.topdir = SDS_TOP
 
     # Read SDS archive
-    def read(self, startt, endt, skip_low_rate_channels=True, trace_ids=None, speed=1, verbose=False ):
+    def read(self, startt, endt, skip_low_rate_channels=True, trace_ids=None, speed=1, verbose=False, fixnet=None ):
         if not trace_ids:
             #nslc_tuples = sdsclient.get_all_nslc(sds_type='D', datetime=startt) 
             trace_ids = self._sds_get_nonempty_traceids(startt, endt)
@@ -27,6 +27,9 @@ class SDSobj():
         st = Stream()
         for trace_id in trace_ids:
             net, sta, loc, chan = trace_id.split('.')
+            if fixnet:
+                if net != fixnet:
+                    continue
             if chan[0]=='L' and skip_low_rate_channels:
                 #print(trace_id,' skipped')
                 continue
@@ -40,6 +43,18 @@ class SDSobj():
                             print('st = read("%s")' % sdsfile)
                         that_st = read(sdsfile)
                         #that_st.merge(method=1,fill_value=0)
+
+                        # added 2024-01-15 to handle merge with different sampling rates
+                        max_npts = -1
+                        best_sampling_rate = -1
+                        for tr in that_st:
+                            if tr.stats.npts > max_npts:
+                                max_npts = tr.stats.npts
+                                best_sampling_rate = tr.stats.sampling_rate
+                        if best_sampling_rate>0:
+                            for tr in that_st:
+                                tr.stats.sampling_rate = best_sampling_rate
+
                         that_st.merge(method=0) # mark overlaps that disagree with missing samples, and do not fill 
                         #print(sdsfile, that_st)
                         for tr in that_st:

@@ -21,7 +21,8 @@ for key in paths:
         print(f"Making directory {thisdir}")
         os.makedirs(thisdir)
     else:
-        print(f"{thisdir} exists")
+        #print(f"{thisdir} exists")
+        pass
 
 if __name__ == "__main__":
     print(paths)

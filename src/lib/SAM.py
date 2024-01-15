@@ -37,10 +37,11 @@ class SAM:
                     good_dataframes[id]=df
             if len(good_dataframes)>0:
                 self.dataframes = good_dataframes
-                print('dataframes found. ignoring other arguments.')
+                #print('dataframes found. ignoring other arguments.')
                 return
             else:
-                print('no valid dataframes found')
+                #print('no valid dataframes found')
+                pass
 
         if not isinstance(stream, obspy.core.Stream):
             # empty SAM object
@@ -673,6 +674,7 @@ class RSAM(SAM):
 
 
 class VSAM(SAM):
+    # Before calling, make sure tr.stats.units is fixed to correct units.
 
     @staticmethod
     def check_units(st):
@@ -689,10 +691,6 @@ class VSAM(SAM):
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='VSAM'):
         return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))
 
-class DSAM(SAM):
-
-
-    
     @staticmethod
     def compute_geometrical_spreading_correction(this_distance_km, chan, surfaceWaves=False, wavespeed_kms=2000, peakf=2.0):
         print('peakf =',peakf)
@@ -702,18 +700,18 @@ class DSAM(SAM):
         else: # body waves - infrasound always here at local distances
             gsc = this_distance_km
         return gsc
-
+    
     @staticmethod
     def compute_inelastic_attenuation_correction(this_distance_km, peakf, wavespeed_kms, Q):
         t = this_distance_km / wavespeed_kms # s
         iac = pow(2.71828, 3.14159 * peakf * t / Q)
-        return iac
-
+        return iac  
+      
     def reduce(self, inventory, source, surfaceWaves=False, Q=None):
         # if the original Trace objects had coordinates attached, add a method in SAM to save those
         # in self.inventory. And add to SAM __init___ the possibility to pass an inventory object.
         
-        print(self)
+        #print(self)
         # Otherwise, need to pass an inventory here.
 
         if surfaceWaves:
@@ -743,14 +741,18 @@ class DSAM(SAM):
                 if col in self.get_metrics(): 
                     df[col] = df[col] * gsc * iac
             corrected_dataframes[seed_id] = df
-
-        # Now create a DR or DRS object
+        return corrected_dataframes
+    
+    def compute_reduced_velocity(self, inventory, source, surfaceWaves=False, Q=None):
+        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q)
         if surfaceWaves:
-            return DRS(dataframes=corrected_dataframes)
+            return VRS(dataframes=corrected_dataframes)
         else:
-            return DR(dataframes=corrected_dataframes)
+            return VR(dataframes=corrected_dataframes)
+        
 
-
+class DSAM(VSAM):
+    
     @staticmethod
     def check_units(st):
         print('DSAM')
@@ -766,8 +768,15 @@ class DSAM(SAM):
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='DSAM'):
         return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))
 
-class VSEM(VSAM):
+    def compute_reduced_displacement(self, inventory, source, surfaceWaves=False, Q=None):
+        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q)
+        if surfaceWaves:
+            return DRS(dataframes=corrected_dataframes)
+        else:
+            return DR(dataframes=corrected_dataframes)
 
+
+class VSEM(VSAM):
 
     def __init__(self, dataframes=None, stream=None, sampling_interval=60.0, filter=[0.5, 18.0], bands = {'VLP': [0.02, 0.2], 'LP':[0.5, 4.0], 'VT':[4.0, 18.0]}, corners=4):
         ''' Create a VSEM object 
@@ -793,10 +802,11 @@ class VSEM(VSAM):
                     good_dataframes[id]=df
             if len(good_dataframes)>0:
                 self.dataframes = good_dataframes
-                print('dataframes found. ignoring other arguments.')
+                #print('dataframes found. ignoring other arguments.')
                 return
             else:
-                print('no valid dataframes found')
+                pass
+                #print('no valid dataframes found')
 
         if not isinstance(stream, obspy.core.Stream):
             # empty VSEM object
@@ -855,50 +865,55 @@ class VSEM(VSAM):
                     df['fratio'] = np.log2(df['VT']/df['LP'])
   
             self.dataframes[tr.id] = df
-            
-    
-    def compute_emag(self):
-        st = self.to_stream('energy')
-        for tr in st:
-            tr.data = energy2magnitude(tr.data)
-        if len(st)>0:
-            return EMAG(stream=st, sampling_interval=st[0].stats.delta)
-        else:
-            return EMAG(stream=st)
-       
-    def sum_energy(self, startt, endt, inventory, source):
-        st = self.to_stream('energy').trim(starttime=startt, endtime=endt)
-        r_km, coords = self.get_distance_km(inventory, source)
+
+    def reduce(self, inventory, source, surfaceWaves=False, Q=None):
+        # if the original Trace objects had coordinates attached, add a method in SAM to save those
+        # in self.inventory. And add to SAM __init___ the possibility to pass an inventory object.
         
-        totalE = {}
-        magnitude = {}
-        for tr in st:
-            r = r_km[tr.id] * 1000.0
-            s = np.nansum(tr.data)
-            s = self.eseismic(s, r)
-            m = energy2magnitude(s)
-            print(f"{tr.id}, Joules: {s:.1e}, Magnitude: {m:.2f}")
-            totalE[tr.id] = s
-            magnitude[tr.id] = m
-        return totalE, magnitude
+        #print(self)
+        # Otherwise, need to pass an inventory here.
+
+        if surfaceWaves:
+            wavespeed_kms=2 # km/s
+        else:
+            wavespeed_kms=3 # km/s
+        
+        # Need to pass a source too, which should be a dict with name, lat, lon, elev.
+        distance_km, coordinates = self.get_distance_km(inventory, source)
+
+        corrected_dataframes = {}
+        for seed_id, df0 in self.dataframes.items():
+            if not seed_id in distance_km:
+                continue
+            df = df0.copy()
+            this_distance_km = distance_km[seed_id]
+            ratio = df['VT'].sum()/df['LP'].sum()
+            peakf = np.sqrt(ratio) * 4
+            net, sta, loc, chan = seed_id.split('.') 
+            esc = self.Eseismic_correction(this_distance_km*1000)
+            if Q:
+                iac = self.compute_inelastic_attenuation_correction(this_distance_km, peakf, wavespeed_kms, Q)
+            else:
+                iac = 1.0
+            for col in df.columns:
+                if col in self.get_metrics(): 
+                    df[col] = df[col] * esc * iac
+            corrected_dataframes[seed_id] = df
+        return corrected_dataframes
+       
+    def compute_reduced_energy(self, inventory, source, surfaceWaves=False, Q=None):
+        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q)
+        return ER(dataframes=corrected_dataframes)
 
     @staticmethod
-    def eacoustic(y, r):
-        # y must be an energy trace from VSEM
-        c = 340 # m/s
-        rho = 1.2 # kg/m3 at STP
-        E = (2 * pi * r**2) * np.sum(y) / (rho * c)
-        return E
+    def Eacoustic_correction(r, c=340, rho=1.2): 
+        Eac = (2 * pi * r**2) / (rho * c)
+        return Eac
 
     @staticmethod
-    def eseismic(y, r):
-        # y must be an energy trace from VSEM
-        c = 2000 # m/s
-        rho = 2500 # kg/m3 at STP
-        S = 1 # site effect
-        A = 1 # inelastic attenuation fraction < 1
-        E = (2 * pi * r**2) * rho * c * np.sum(y) * S**2/A
-        return E
+    def Eseismic_correction(r, c=3000, rho=2500, S=1, A=1): # a body wave formula
+        Esc = (2 * pi * r**2) * rho * c * S**2/A
+        return Esc
 
     def downsample(self, new_sampling_interval=3600):
         ''' downsample a VSEM object to a larger sampling interval(e.g. from 1 minute to 1 hour). Returns a new VSEM object.
@@ -920,8 +935,6 @@ class VSEM(VSAM):
             else:
                 print('Cannot downsample to a smaller sampling interval')
         return self.__class__(dataframes=dataframes) 
-       
-
             
     @staticmethod
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='VSEM'):
@@ -941,10 +954,11 @@ class DR(SAM):
                     good_dataframes[id]=df
             if len(good_dataframes)>0:
                 self.dataframes = good_dataframes
-                print('dataframes found. ignoring other arguments.')
+                #print('dataframes found. ignoring other arguments.')
                 return
             else:
-                print('no valid dataframes found')
+                pass
+                #print('no valid dataframes found')
     
     @staticmethod
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='DR'):
@@ -1077,8 +1091,6 @@ class DR(SAM):
         Average a SAM object across the whole network of seed_ids
         This is primarily a tool for then making iceweb_plot's with just one representative trace
         It is particularly designed to be used after running examine_spread and apply_station_corrections
-        Though this is part of the DR class and those that subclass it, it could be lifted to the abstract SAM class
-        and so could those other routines. If so, then reduce should also be lifted to the SAM class
         '''
         df = pd.DataFrame()
         for metric in self.get_metrics():
@@ -1116,36 +1128,32 @@ class VRS(DR):
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='VRS'):
 	    return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))	   
 	    	    
-	    
-class EMAG(SAM):
+class ER(DR):
 
-    def compute_vsem(self):
-        st = self.to_stream('magnitude')
+    @staticmethod
+    def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='ER'):
+	    return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))	   
+       
+    def sum_energy(self, startt, endt, inventory, source):
+        st = self.to_stream('energy').trim(starttime=startt, endtime=endt)
+        r_km, coords = self.get_distance_km(inventory, source)
+        
+        totalE = {}
+        magnitude = {}
         for tr in st:
-            tr.data = magnitude2energy(tr.data)
-        return VSEM(stream=st, sampling_interval=self.get_sampling_interval())    
-                
-    def downsample(self, new_sampling_interval=3600):
-        ''' downsample an EMAG object to a larger sampling interval(e.g. from 1 minute to 1 hour). Returns a new SAM object.
-         
-            Optional name-value pair:
-                new_sampling_interval: the new sampling interval (in seconds) to downsample to. Default: 3600
-        '''
-
-        # convert back to VSEM object
-        # downsample VSEM
-        # re-convert VSEM to EMAG
-        vsemObj = self.compute_vsem()
-        vsemObj.downsample(new_sampling_interval=new_sampling_interval)
-        emagObj = vsemObj.compute_emag()
-        return emagObj
-
+            r = r_km[tr.id] * 1000.0
+            s = np.nansum(tr.data)
+            m = energy2magnitude(s)
+            print(f"{tr.id}, Joules: {s:.1e}, Magnitude: {m:.2f}")
+            totalE[tr.id] = s
+            magnitude[tr.id] = m
+        return totalE, magnitude
 
     def plot():
         pass
     
     @staticmethod
-    def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='EMAG'):
+    def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='ER'):
 	    return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))	   
 
 def magnitude2energy(mag, a=-4.7, b=2/3):
@@ -1172,7 +1180,7 @@ def magnitude2energy(mag, a=-4.7, b=2/3):
     return eng 
     
     
-def energy2magnitude(eng, a=-4.7, b=2/3):
+def energy2magnitude(eng, a=-3.2, b=2/3):
     '''
     Convert a (vector of) magnitude(s) into a (vector of) equivalent energy(/ies).
     
