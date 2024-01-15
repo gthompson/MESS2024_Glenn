@@ -9,7 +9,9 @@ SDS_*/
 obsolete/
 db/
 data/
-
+rawdata/
+Untitled*.ipynb
+*.tar
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
