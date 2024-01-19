@@ -5,6 +5,7 @@
 from obspy import Stream, read
 import obspy.clients.filesystem.sds
 import os
+import glob
 import numpy as np
 import pandas as pd
 
@@ -17,6 +18,24 @@ class SDSobj():
         self.client = obspy.clients.filesystem.sds.Client(SDS_TOP, sds_type=sds_type, format=format)
         self.stream = streamobj
         self.topdir = SDS_TOP
+
+    # Check SDS archive exists
+    def find_which_days_missing(self, stime, etime, net):
+        secondsPerDay = 60 * 60 * 24
+        dayt = stime
+        missing_days = []
+        while dayt < etime:
+            # check if files for this Julian day already exist
+            jday = dayt.strftime('%j')
+            yyyy = dayt.strftime('%Y')
+            pattern = os.path.join(self.topdir, yyyy, net, '*', '*.D', f"{net}*.{yyyy}.{jday}")
+            print('Looking for files in SDS archive matching', pattern)
+            existingfiles = glob.glob(pattern)
+            print(f"Found {len(existingfiles)} files")
+            if len(existingfiles) == 0:
+                missing_days.append(dayt)
+            dayt += secondsPerDay
+        return missing_days
 
     # Read SDS archive
     def read(self, startt, endt, skip_low_rate_channels=True, trace_ids=None, speed=1, verbose=False, fixnet=None ):

@@ -13,7 +13,7 @@ from math import pi
 
 class SAM:
 
-    def __init__(self, dataframes=None, stream=None, sampling_interval=60.0, filter=[0.5, 18.0], bands = {'VLP': [0.02, 0.2], 'LP':[0.5, 4.0], 'VT':[4.0, 18.0]}, corners=4):
+    def __init__(self, dataframes=None, stream=None, sampling_interval=60.0, filter=[0.5, 18.0], bands = {'VLP': [0.02, 0.2], 'LP':[0.5, 4.0], 'VT':[4.0, 18.0]}, corners=4, clip=None, verbose=False):
         ''' Create an SAM object 
         
             Optional name-value pairs:
@@ -49,7 +49,8 @@ class SAM:
             return
         
         good_stream = self.check_units(stream)
-        #print('good_stream:\n',good_stream)
+        if verbose:
+            print('good_stream:\n',good_stream)
 
         if len(good_stream)>0:
             if good_stream[0].stats.sampling_rate == 1/sampling_interval:
@@ -77,8 +78,8 @@ class SAM:
             df['time'] = pd.Series(np.nanmin(t,axis=1))
 
             if filter:
-                if tr.stats.sampling_rate<filter[1]*2.5:
-                    #print(f"{tr}: bad sampling rate. Skipping.")
+                if tr.stats.sampling_rate<filter[1]*2.2:
+                    print(f"{tr}: bad sampling rate. Skipping.")
                     continue
                 tr2 = tr.copy()
                 try:
@@ -97,7 +98,8 @@ class SAM:
                     else: # not a masked array
                         continue
                         
-                    
+                if clip:
+                    tr2.data = np.clip(tr2.data, a_max=clip, a_min=-clip)    
                 tr2.filter('bandpass', freqmin=filter[0], freqmax=filter[1], corners=corners)
                 y = self.reshape_trace_data(np.absolute(tr2.data), sampling_rate, sampling_interval)
             else:
@@ -107,7 +109,7 @@ class SAM:
             df['mean'] = pd.Series(np.nanmean(y,axis=1)) 
             df['max'] = pd.Series(np.nanmax(y,axis=1))
             df['median'] = pd.Series(np.nanmedian(y,axis=1))
-            df['std'] = pd.Series(np.nanstd(y,axis=1))
+            df['rms'] = pd.Series(np.nanstd(y,axis=1))
 
             if bands:
                 for key in bands:
@@ -122,12 +124,37 @@ class SAM:
             self.dataframes[tr.id] = df
 
     
-    
     def copy(self):
         ''' make a full copy of an SAM object and return it '''
         selfcopy = self.__class__(stream=obspy.core.Stream())
         selfcopy.dataframes = self.dataframes.copy()
         return selfcopy
+    
+    def despike(self, metrics=['mean'], thresh=1.5, reps=1, verbose=False):
+        if not isinstance(metrics, list):
+            metrics = [metrics]
+        if metrics=='all':
+            metrics = self.get_metrics()
+        for metric in metrics:
+            st = self.to_stream(metric=metric)
+            for tr in st:
+                x = tr.data
+                count1 = 0
+                count2 = 0
+                for i in range(len(x)-3): # remove spikes on length 2
+                    if x[i+1]>x[i]*thresh and x[i+2]>x[i]*thresh and x[i+1]>x[i+3]*thresh and x[i+2]>x[i+3]*thresh:
+                        count2 += 1
+                        x[i+1] = (x[i] + x[i+3])/2
+                        x[i+2] = x[i+1]
+                for i in range(len(x)-2): # remove spikes of length 1
+                    if x[i+1]>x[i]*thresh and x[i+1]>x[i+2]*thresh:
+                        x[i+1] = (x[i] + x[i+2])/2  
+                        count1 += 1  
+                if verbose:
+                    print(f'{tr.id}: removed {count2} length-2 spikes and {count1} length-1 spikes')           
+                self.dataframes[tr.id][metric]=x
+        if reps>1:
+            self.despike(metrics=metrics, thresh=thresh, reps=reps-1)        
 
     def downsample(self, new_sampling_interval=3600):
         ''' downsample an SAM object to a larger sampling interval(e.g. from 1 minute to 1 hour). Returns a new SAM object.
@@ -169,6 +196,9 @@ class SAM:
             #distance_km[seed_id] = degrees2kilometers(distance_deg)
             distance_km[seed_id] = distance_m/1000
         return distance_km, coordinates
+
+    def __len__(self):
+        return len(self.dataframes)
 
     def plot(self, metrics=['mean'], kind='stream', logy=False, equal_scale=False, outfile=None):
         ''' plot a SAM object 
@@ -212,7 +242,7 @@ class SAM:
                 if not 'VLP' in this_df.columns:
                     print('no frequency bands data for ',key)
                     continue
-                ph2 = this_df.plot(x='time', y=['VLP', 'LP', 'VT'], kind='line', title=f"{key}, f-bands", logy=log, rot=45)
+                ph2 = this_df.plot(x='time', y=['VLP', 'LP', 'VT'], kind='line', title=f"{key}, f-bands", logy=logy, rot=45)
                 if outfile:
                     this_outfile = outfile.replace('.png', "_bands.png")
                     plt.savefig(this_outfile)
@@ -283,6 +313,8 @@ class SAM:
                         df = pd.read_pickle(samfile)
                     if df.empty:
                         continue
+                    if 'std' in df.columns:
+                        df.rename(columns={'std':'rms'}, inplace=True)
                     df['pddatetime'] = pd.to_datetime(df['time'], unit='s')
                     # construct Boolean mask
                     mask = df['pddatetime'].between(startt.isoformat(), endt.isoformat())
@@ -559,9 +591,14 @@ class SAM:
         #print('removing empty dataframes')
         dfs_dict = self.dataframes.copy() # store this so we can delete during loop, otherwise complains about deleting during iteration
         for id in self.dataframes:
+            df = self.dataframes[id]
             #print(id, self.dataframes[id]['mean'])
-            metrics=self.get_metrics()
-            if len(self.dataframes[id])==0 or (self.dataframes[id][metrics[0]] == 0).all() or (pd.isna(self.dataframes[id][metrics[0]])).all():
+            metrics=self.get_metrics(df=df)
+            for metric in metrics:
+                if (df[metric] == 0).all() or pd.isna(df[metric]).all():
+                    #print('dropping ', metric)
+                    dfs_dict[id].drop(columns=[metric])
+            if len(df)==0:
                 del dfs_dict[id]
         self.dataframes = dfs_dict
 
@@ -581,9 +618,12 @@ class SAM:
         seed_ids = list(self.dataframes.keys())
         return seed_ids
         
-    def get_metrics(self):
-        seed_ids = self.get_seed_ids()
-        metrics = self.dataframes[seed_ids[0]].columns[1:]
+    def get_metrics(self, df=None):
+        if isinstance(df, pd.DataFrame):
+            metrics = df.columns[1:]
+        else:
+            seed_ids = self.get_seed_ids()
+            metrics = self.dataframes[seed_ids[0]].columns[1:]
         return metrics
         
 
@@ -693,9 +733,9 @@ class VSAM(SAM):
 
     @staticmethod
     def compute_geometrical_spreading_correction(this_distance_km, chan, surfaceWaves=False, wavespeed_kms=2000, peakf=2.0):
-        print('peakf =',peakf)
+        #print('peakf =',peakf)
         if surfaceWaves and chan[1]=='H': # make sure seismic channel
-            wavelength_km = peakf * wavespeed_kms
+            wavelength_km = wavespeed_kms/peakf
             gsc = np.sqrt(this_distance_km * wavelength_km)
         else: # body waves - infrasound always here at local distances
             gsc = this_distance_km
@@ -703,21 +743,24 @@ class VSAM(SAM):
     
     @staticmethod
     def compute_inelastic_attenuation_correction(this_distance_km, peakf, wavespeed_kms, Q):
-        t = this_distance_km / wavespeed_kms # s
-        iac = pow(2.71828, 3.14159 * peakf * t / Q)
-        return iac  
+        if Q:
+            t = this_distance_km / wavespeed_kms # s
+            iac = pow(2.71828, 3.14159 * peakf * t / Q)
+            return iac
+        else:
+            return 1.0  
       
-    def reduce(self, inventory, source, surfaceWaves=False, Q=None):
+    def reduce(self, inventory, source, surfaceWaves=False, Q=None, wavespeed_kms=None, fixpeakf=None):
         # if the original Trace objects had coordinates attached, add a method in SAM to save those
         # in self.inventory. And add to SAM __init___ the possibility to pass an inventory object.
         
         #print(self)
         # Otherwise, need to pass an inventory here.
-
-        if surfaceWaves:
-            wavespeed_kms=2 # km/s
-        else:
-            wavespeed_kms=3 # km/s
+        if not wavespeed_kms:
+            if surfaceWaves:
+                wavespeed_kms=2 # km/s
+            else:
+                wavespeed_kms=3 # km/s
         
         # Need to pass a source too, which should be a dict with name, lat, lon, elev.
         distance_km, coordinates = self.get_distance_km(inventory, source)
@@ -729,7 +772,10 @@ class VSAM(SAM):
             df = df0.copy()
             this_distance_km = distance_km[seed_id]
             ratio = df['VT'].sum()/df['LP'].sum()
-            peakf = np.sqrt(ratio) * 4
+            if fixpeakf:
+                peakf = fixpeakf
+            else:
+                peakf = np.sqrt(ratio) * 4
             net, sta, loc, chan = seed_id.split('.')    
             gsc = self.compute_geometrical_spreading_correction(this_distance_km, chan, surfaceWaves=surfaceWaves, \
                                                            wavespeed_kms=wavespeed_kms, peakf=peakf)
@@ -739,12 +785,18 @@ class VSAM(SAM):
                 iac = 1.0
             for col in df.columns:
                 if col in self.get_metrics(): 
-                    df[col] = df[col] * gsc * iac
+                    if col=='VLP':
+                        gscvlp = self.compute_geometrical_spreading_correction(this_distance_km, chan, surfaceWaves=surfaceWaves, \
+                                                           wavespeed_kms=wavespeed_kms, peakf=0.06)
+                        iacvlp = self.compute_inelastic_attenuation_correction(this_distance_km, 0.06, wavespeed_kms, Q)
+                        df[col] = df[col] * gscvlp * iacvlp
+                    else:
+                        df[col] = df[col] * gsc * iac                    
             corrected_dataframes[seed_id] = df
         return corrected_dataframes
     
-    def compute_reduced_velocity(self, inventory, source, surfaceWaves=False, Q=None):
-        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q)
+    def compute_reduced_velocity(self, inventory, source, surfaceWaves=False, Q=None, wavespeed_kms=None, peakf=None):
+        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q, wavespeed_kms=wavspeed_kms, fixpeakf=peakf)
         if surfaceWaves:
             return VRS(dataframes=corrected_dataframes)
         else:
@@ -768,8 +820,8 @@ class DSAM(VSAM):
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='DSAM'):
         return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))
 
-    def compute_reduced_displacement(self, inventory, source, surfaceWaves=False, Q=None):
-        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q)
+    def compute_reduced_displacement(self, inventory, source, surfaceWaves=False, Q=None, wavespeed_kms=2.0, peakf=None):
+        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q, wavespeed_kms=wavespeed_kms, fixpeakf=peakf)
         if surfaceWaves:
             return DRS(dataframes=corrected_dataframes)
         else:
@@ -778,7 +830,7 @@ class DSAM(VSAM):
 
 class VSEM(VSAM):
 
-    def __init__(self, dataframes=None, stream=None, sampling_interval=60.0, filter=[0.5, 18.0], bands = {'VLP': [0.02, 0.2], 'LP':[0.5, 4.0], 'VT':[4.0, 18.0]}, corners=4):
+    def __init__(self, dataframes=None, stream=None, sampling_interval=60.0, filter=[0.5, 18.0], bands = {'VLP': [0.02, 0.2], 'LP':[0.5, 4.0], 'VT':[4.0, 18.0]}, corners=4, verbose=False):
         ''' Create a VSEM object 
         
             Optional name-value pairs:
@@ -802,11 +854,12 @@ class VSEM(VSAM):
                     good_dataframes[id]=df
             if len(good_dataframes)>0:
                 self.dataframes = good_dataframes
-                #print('dataframes found. ignoring other arguments.')
+                if verbose:
+                    print('dataframes found. ignoring other arguments.')
                 return
             else:
+                print('no valid dataframes found')
                 pass
-                #print('no valid dataframes found')
 
         if not isinstance(stream, obspy.core.Stream):
             # empty VSEM object
@@ -814,7 +867,8 @@ class VSEM(VSAM):
             return
         
         good_stream = self.check_units(stream)
-        #print('good_stream:\n',good_stream)
+        if verbose:
+            print('good_stream:\n',good_stream)
 
         if len(good_stream)>0:
             if good_stream[0].stats.sampling_rate == 1/sampling_interval:
@@ -842,8 +896,8 @@ class VSEM(VSAM):
             df['time'] = pd.Series(np.nanmin(t,axis=1))
 
             if filter:
-                if tr.stats.sampling_rate<filter[1]*2.5:
-                    #print(f"{tr}: bad sampling rate. Skipping.")
+                if tr.stats.sampling_rate<filter[1]*2.2:
+                    print(f"{tr}: Sampling rate must be at least {filter[1]*2.2:.1f}. Skipping.")
                     continue
                 tr2 = tr.copy()
                 tr2.detrend('demean')
@@ -861,22 +915,32 @@ class VSEM(VSAM):
                     tr2.filter('bandpass', freqmin=flow, freqmax=fhigh, corners=corners)
                     y = self.reshape_trace_data(abs(tr2.data), sampling_rate, sampling_interval)
                     df[key] = pd.Series(np.nansum(np.square(y),axis=1)) 
-                if 'LP' in bands and 'VT' in bands:
-                    df['fratio'] = np.log2(df['VT']/df['LP'])
   
             self.dataframes[tr.id] = df
 
-    def reduce(self, inventory, source, surfaceWaves=False, Q=None):
+    @staticmethod
+    def check_units(st):
+        print('VSEM')
+        good_st = obspy.core.Stream()
+        for tr in st:
+            if 'units' in tr.stats:
+                u = tr.stats['units'].upper()
+                if u == 'M2/S' or u == 'PA2':
+                    good_st.append(tr)
+        return good_st  
+    
+    def reduce(self, inventory, source, surfaceWaves=False, Q=None, wavespeed_kms=None, fixpeakf=None):
         # if the original Trace objects had coordinates attached, add a method in SAM to save those
         # in self.inventory. And add to SAM __init___ the possibility to pass an inventory object.
         
         #print(self)
         # Otherwise, need to pass an inventory here.
 
-        if surfaceWaves:
-            wavespeed_kms=2 # km/s
-        else:
-            wavespeed_kms=3 # km/s
+        if not wavespeed_kms:
+            if surfaceWaves:
+                wavespeed_kms=2 # km/s
+            else:
+                wavespeed_kms=3 # km/s
         
         # Need to pass a source too, which should be a dict with name, lat, lon, elev.
         distance_km, coordinates = self.get_distance_km(inventory, source)
@@ -888,7 +952,11 @@ class VSEM(VSAM):
             df = df0.copy()
             this_distance_km = distance_km[seed_id]
             ratio = df['VT'].sum()/df['LP'].sum()
-            peakf = np.sqrt(ratio) * 4
+            if fixpeakf:
+                peakf = fixpeakf
+            else:
+                peakf = np.sqrt(ratio) * 4
+
             net, sta, loc, chan = seed_id.split('.') 
             esc = self.Eseismic_correction(this_distance_km*1000)
             if Q:
@@ -897,7 +965,11 @@ class VSEM(VSAM):
                 iac = 1.0
             for col in df.columns:
                 if col in self.get_metrics(): 
-                    df[col] = df[col] * esc * iac
+                    if col=='VLP':
+                        iacvlp = self.compute_inelastic_attenuation_correction(this_distance_km, 0.06, wavespeed_kms, Q)
+                        df[col] = df[col] * esc * iacvlp
+                    else:
+                        df[col] = df[col] * esc * iac
             corrected_dataframes[seed_id] = df
         return corrected_dataframes
        
@@ -1021,7 +1093,33 @@ class DR(SAM):
             else:
             	plt.show()
      
-     
+    def max(self, metric='rms'):
+        lod = []
+        #print(type(self))
+        if metric=='rms' and not 'rms' in self.get_metrics():
+            metric='std'
+        allmax = []
+        classname = self.__class__.__name__
+        for seed_id in self.dataframes:
+            df = self.dataframes[seed_id]
+            thismax = df[metric].max()
+            if thismax == 0 or np.isnan(thismax):
+                continue
+            #print(f"{seed_id}: {thismax:.1e} m at 1 km" )
+            #maxes[seed_id] = thismax
+            allmax.append(thismax)
+            thisDict = {'seed_id': seed_id, classname:np.round(thismax*1e7,2)}
+            lod.append(thisDict)
+        allmax = np.array(sorted(allmax))
+        medianMax = np.median(allmax) 
+        #print(f"Network: {medianMax:.1e} m at 1 km" )   
+        networkMax = np.round(medianMax*1e7,2)
+        thisDict = {'seed_id':'Network', classname:networkMax}
+        lod.append(thisDict)
+        df = pd.DataFrame(lod)
+        display(df)
+        return networkMax
+
     def show_percentiles(self, metric):
         st = self.to_stream(metric=metric)
         #fig, ax = plt.subplots(len(st), 1)
@@ -1099,7 +1197,8 @@ class DR(SAM):
             all_data_arrays = []
             for tr in st:
                 all_data_arrays.append(tr.data)
-            twoDarray = np.stack(all_data_arrays)
+            twoDarray = np.stac
+#import pytzk(all_data_arrays)
             if average=='mean':
                 df[metric] = pd.Series(np.nanmean(y,axis=1))  
             elif average=='median':
@@ -1134,23 +1233,37 @@ class ER(DR):
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='ER'):
 	    return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))	   
        
-    def sum_energy(self, startt, endt, inventory, source):
-        st = self.to_stream('energy').trim(starttime=startt, endtime=endt)
-        r_km, coords = self.get_distance_km(inventory, source)
-        
-        totalE = {}
-        magnitude = {}
+    def sum_energy(self, startt=None, endt=None, metric='energy'): #, inventory, source):
+        st = self.to_stream(metric)
+        if startt and endt:
+            st.trim(starttime=startt, endtime=endt)
+        #r_km, coords = self.get_distance_km(inventory, source)
+        lod = []
+        allE = []
+        allM = []
         for tr in st:
-            r = r_km[tr.id] * 1000.0
-            s = np.nansum(tr.data)
-            m = energy2magnitude(s)
-            print(f"{tr.id}, Joules: {s:.1e}, Magnitude: {m:.2f}")
-            totalE[tr.id] = s
-            magnitude[tr.id] = m
-        return totalE, magnitude
+            
+            #r = r_km[tr.id] * 1000.0
+            e = np.nansum(tr.data)
+            if e==0:
+                continue
+            m = np.round(energy2magnitude(e),2)
+            allE.append(e)
+            allM.append(m)
+            print(f"{tr.id}: Joules: {e:.2e}, Magnitude: {m:.1f}")
+            thisDict = {'seed_id':tr.id, 'Energy':e, 'EMag':m}
+            lod.append(thisDict)
 
-    def plot():
-        pass
+        medianE = np.median(allE)
+        medianM = np.round(np.median(allM),2)
+        print(f"Network: Joules: {medianE:.2e}, Magnitude: {medianM:.1f}")
+        thisDict = {'seed_id':'Network', 'Energy':medianE, 'EMag':medianM}
+        lod.append(thisDict)
+        df = pd.DataFrame(lod)  
+        return medianE, medianM
+
+    #def plot():
+    #    pass
     
     @staticmethod
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='ER'):
@@ -1202,37 +1315,6 @@ def energy2magnitude(eng, a=-3.2, b=2/3):
     
     mag = b * (np.log10(eng) + a) 	
     return mag
-
-def wrapper_read_select_downsample_plot(SAM_DIR, starttime, endtime, sampling_interval=60, samclass='RSAM', metric='median', verticals_only=True, \
-          downsample=False, npts=100, savefig=False):
-    samobj = eval(samclass).read(starttime, endtime, SAM_DIR=SAM_DIR)
-    if verticals_only:
-        samobj = samobj.select(component='Z')
-    if downsample:
-        sampling_interval = int((endtime - starttime) / npts)
-        samobj = samobj.downsample(new_sampling_interval=sampling_interval)
-    if savefig:
-        print(samobj)
-        st = samobj.to_stream()
-        print(st)
-        net = st[0].stats.network
-        pngfile = f"{samclass}.{net}.{starttime.strftime('%Y%m%d')}.{endtime.strftime('%Y%m%d')}.{sampling_interval}.{metric}.png"
-        if isinstance(savefig, str):
-            if os.path.isdir(savefig):
-                pngfile = os.path.join(savefig, pngfile)
-        print(f'Plotting to {pngfile}')
-        samobj.plot(metrics=metric, outfile=pngfile) 
-    else:
-        samobj.plot(metrics=metric)   
-
-def wrapper_read_select_downsample_plot_all_samclasses(SAM_DIR, starttime, endtime, sampling_interval=60, metric='median', verticals_only=True, \
-                        downsample=False, npts=100, savefig=False):
-    for samclass in ['RSAM', 'VSAM', 'VSEM', 'DSAM']:
-        thismetric = metric
-        if samclass=='VSEM':
-            thismetric = 'energy'
-        wrapper_read_select_downsample_plot(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass=samclass, metric=thismetric, \
-                                            verticals_only=verticals_only, downsample=downsample, npts=npts, savefig=savefig)
     
 if __name__ == "__main__":
     pass

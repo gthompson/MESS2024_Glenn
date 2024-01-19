@@ -12,6 +12,7 @@ import sys
 #import pytz
 import glob
 import numpy as np
+import pandas as pd
 import obspy
 from obspy.clients.filesystem.sds import Client as sdsclient
 from obspy.core.inventory.inventory import read_inventory
@@ -25,8 +26,9 @@ def sds2db(dboutday, SDS_DIR, jday):
     allfilesstr = " ".join(allfiles)
     os.system(f"miniseed2db {allfilesstr} {dboutday}")
 
-def seisandb2SDS(seisandbdir, sdsdir, startt, endt, dbout, round_sampling_rate=True):
+def seisandb2SDS(seisandbdir, sdsdir, startt, endt, net, dbout=None, round_sampling_rate=True):
     sdsobj = SDS.SDSobj(sdsdir)
+    missing_days = sdsobj.find_which_days_missing(startt, endt, net)
     mseeddir = 'seisan2mseed'
     if not os.path.isdir(mseeddir):
         os.makedirs(mseeddir)
@@ -38,6 +40,10 @@ def seisandb2SDS(seisandbdir, sdsdir, startt, endt, dbout, round_sampling_rate=T
     dayt = startt
 
     while (dayt <= endt):
+        if not dayt in missing_days:
+            dayt += secondsPerDay
+            continue
+
         print(dayt, end="\n")
         ymd = dayt.strftime("%Y%m%d")
         chuckfile = f"chuckmseedblocks{ymd}.msd"
@@ -142,14 +148,15 @@ def compute_raw_metrics(paths, startTime, endTime, sampling_interval=60, do_RSAM
             daytime += secondsPerDay
     del rawSDSclient
 
-def compute_SDS_VEL(paths, startTime, endTime, invfile=None):
+def compute_SDS_VEL(paths, startTime, endTime, invfile):
     print(f"compute_SDS_VEL: invfile = {invfile}")
-    compute_SDS_corrected(paths, startTime, endTime, invfile=invfile, kind='VEL')
+    compute_SDS_corrected(paths, startTime, endTime, invfile, kind='VEL')
     
-def compute_SDS_DISP(paths, startTime, endTime, invfile=None):
-    compute_SDS_corrected(paths, startTime, endTime, invfile=invfile, kind='DISP')
+def compute_SDS_DISP(paths, startTime, endTime, invfile):
+    compute_SDS_corrected(paths, startTime, endTime, invfile, kind='DISP')
     
-def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL', net=None):
+def compute_SDS_corrected(paths, startTime, endTime, invfile, kind='VEL'):
+    net = os.path.basename(invfile)[0:2]
     print(f"compute_SDS_corrected: invfile = {invfile}")
     if kind!='VEL' and kind!='DISP':
         print('must specify whether to correct to VEL or DISP')
@@ -157,6 +164,7 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL', n
     #rawSDSclient = sdsclient(paths['SDS_DIR'])
     rawSDSclient = SDS.SDSobj(paths['SDS_DIR'], sds_type='D', format='MSEED')
     outSDSclient = SDS.SDSobj(paths['SDS_%s_DIR' % kind], sds_type='D', format='MSEED')
+    missing_days = outSDSclient.find_which_days_missing(startTime, endTime, net)
     pre_filt = (0.01, 0.02, 18.0, 36.0)
     inv = read_inventory(invfile, format='stationxml')  
     #print(inv) 
@@ -166,6 +174,9 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL', n
     daytime = startTime
     taperSecs = 1800
     while daytime < endTime:     
+        if not daytime in missing_days:
+            daytime += secondsPerDay
+            continue
         print(f'Loading Stream data for {daytime}')
         #st = mySDSreadClient.get_waveforms("MV", "*", "*", "[SBEHCD]*", daytime-taperSecs, daytime+secondsPerDay+taperSecs)
         rawSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
@@ -191,6 +202,7 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile=None, kind='VEL', n
                 except Exception as e:
                     print(e)
         daytime += secondsPerDay 
+    del rawSDSclient, outSDSclient
 
                
 def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=True, do_VSEM=True, net=None):      
@@ -313,11 +325,11 @@ def small_sausage(paths, startt, endt, sampling_interval=60, source=None, invfil
 
         if do_metric['SDS_VEL']:
             print('Calling compute_SDS_VEL')
-            compute_SDS_VEL(paths, startt, endt, invfile=invfile)
+            compute_SDS_VEL(paths, startt, endt, invfile)
 
         if do_metric['SDS_DISP']:
             print('Calling compute_SDS_DISP')
-            compute_SDS_DISP(paths, startt, endt, invfile=invfile)
+            compute_SDS_DISP(paths, startt, endt, invfile)
 
         print('Calling compute_velocity_metrics')
         compute_velocity_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_VSAM=do_metric['VSAM'], \
@@ -340,18 +352,86 @@ def big_sausage(seisandbdir, paths, startt, endt, sampling_interval=60, source=N
         do_metric = check_what_to_do(paths, net, startt, endt, sampling_interval=sampling_interval, ext=ext, invfile=invfile)
 
     if do_metric['SDS_RAW']:
-        seisandb2SDS(seisandbdir, paths['SDS_DIR'], startt, endt, dbout, round_sampling_rate=round_sampling_rate)
+        seisandb2SDS(seisandbdir, paths['SDS_DIR'], startt, endt, net, dbout=dbout, round_sampling_rate=round_sampling_rate)
     
     # small sauage stuff
     small_sausage(paths, startt, endt, sampling_interval=sampling_interval, source=source, invfile=invfile, Q=Q,\
                 ext=ext, net=net, do_metric=do_metric)
 
-def check_what_to_do(paths, net, startt, endt, sampling_interval=60, ext='pickle', invfile=None):
+def wrapper_read_select_downsample(SAM_DIR, starttime, endtime, sampling_interval=60, samclass='RSAM', metric='median', verticals_only=True, \
+          new_sampling_interval=None):
+    samobj = eval(samclass).read(starttime, endtime, SAM_DIR=SAM_DIR)
+    if len(samobj)==0:
+        return
+    if verticals_only:
+        samobj = samobj.select(component='Z')
+    if new_sampling_interval:
+        samobj = samobj.downsample(new_sampling_interval=new_sampling_interval)
+    return samobj
+
+
+def wrapper_read_select_downsample_plot(SAM_DIR, starttime, endtime, sampling_interval=60, samclass='RSAM', metric='median', verticals_only=True, \
+          new_sampling_interval=None, savefig=False):
+    samobj = wrapper_read_select_downsample(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass=samclass, metric=metric, \
+                                            verticals_only=verticals_only, new_sampling_interval=new_sampling_interval)
+    if savefig:
+        st = samobj.to_stream(metric=metric)
+        net = st[0].stats.network
+        pngfile = f"{samclass}.{net}.{starttime.strftime('%Y%m%d')}.{endtime.strftime('%Y%m%d')}.{sampling_interval}.{metric}.png"
+        if isinstance(savefig, str):
+            if os.path.isdir(savefig):
+                pngfile = os.path.join(savefig, pngfile)
+        print(f'Plotting to {pngfile}')
+        samobj.plot(metrics=metric, outfile=pngfile) 
+    else:
+        samobj.plot(metrics=metric)   
+
+
+def wrapper_read_select_downsample_plot_all_samclasses(SAM_DIR, starttime, endtime, sampling_interval=60, metric='median', verticals_only=True, \
+                        downsample=False, npts=100, savefig=False):
+    pngfiles = []
+    for samclass in ['RSAM', 'VSAM', 'VSEM', 'DSAM', 'DR', 'DRS', 'ER']:
+        thismetric = metric
+        if samclass[0:2]=='DR':
+            metric='std'
+        if samclass=='VSEM' or samclass=='ER':
+            thismetric = 'energy'
+        wrapper_read_select_downsample_plot(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass=samclass, metric=thismetric, \
+                                            verticals_only=verticals_only, downsample=downsample, npts=npts, savefig=savefig)
+
+    return pngfiles
+
+def compute_network_DR_ME(SAM_DIR, starttime, endtime, sampling_interval=60, verticals_only=True, \
+                        new_sampling_interval=None, savefig=False):
+    #eventDict = {'starttime':starttime, 'endtime':endtime, 'sampling_interval':sampling_interval}
+    DRobj = wrapper_read_select_downsample(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass='DR', metric='std', \
+                                            verticals_only=verticals_only, new_sampling_interval=new_sampling_interval)
+    df1 = DRobj.max(metric='std')
+    print(df1)
+    DRSobj = wrapper_read_select_downsample(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass='DRS', metric='std', \
+                                            verticals_only=verticals_only, new_sampling_interval=new_sampling_interval)
+    df2 = DRSobj.max(metric='std')
+    print(df2)
+    #eventDict{'DRS':maxes['network']}
+    
+    ERobj = wrapper_read_select_downsample(SAM_DIR, starttime, endtime, sampling_interval=sampling_interval, samclass='ER', metric='energy', \
+                                            verticals_only=verticals_only, new_sampling_interval=new_sampling_interval)   
+    df3 = ERobj.sum_energy()
+    print(df3)
+    
+    df4 = pd.merge(df1, df2, on='seed_id')
+    df5 = pd.merge(df4, df3, on='seed_id')
+    return df5    
+
+
+
+def check_what_to_do(paths, net, startt, endt, sampling_interval=60, ext='pickle', invfile=None, verbose=True):
     # check that derived data created by small or big sausage exist
 
     do_metric = {}
 
     # Check inventory exists in StationXML
+    print('Checking for stationXML')
     if not invfile:
         invfile = os.path.join(paths['RESPONSE_DIR'],f"{net}.xml")
     do_metric['inventory'] = True
@@ -359,31 +439,32 @@ def check_what_to_do(paths, net, startt, endt, sampling_interval=60, ext='pickle
         do_metric['inventory'] = False
         
     # Check raw SDS data exist
+    print('Checking for raw SDS data')
     rawSDSclient = SDS.SDSobj(paths['SDS_DIR'], sds_type='D', format='MSEED') 
-    rawSDSclient.read(startt, endt, fixnet=net)
+    missing_days_sds_raw = rawSDSclient.find_which_days_missing(startt, endt, net)
     do_metric['SDS_RAW']=True
-    if len(rawSDSclient.stream)>0:
-        if rawSDSclient.stream[0].stats.npts>0:
+    if len(missing_days_sds_raw)==0:
             do_metric['SDS_RAW']=False
 
     # Check SDS_VEL data exist
+    print('Checking for velocity SDS data')
     velSDSclient = SDS.SDSobj(paths['SDS_VEL_DIR'], sds_type='D', format='MSEED') 
-    velSDSclient.read(startt, endt, fixnet=net)
+    missing_days_sds_vel = velSDSclient.find_which_days_missing(startt, endt, net)
     do_metric['SDS_VEL']=True
-    if len(velSDSclient.stream)>0:
-        if velSDSclient.stream[0].stats.npts>0:
+    if len(missing_days_sds_vel)==0:
             do_metric['SDS_VEL']=False
 
     # Check SDS_DISP data exist
+    print('Checking for displacement SDS data')
     dispSDSclient = SDS.SDSobj(paths['SDS_DISP_DIR'], sds_type='D', format='MSEED') 
-    dispSDSclient.read(startt, endt, fixnet=net)
+    missing_days_sds_disp = dispSDSclient.find_which_days_missing(startt, endt, net)
     do_metric['SDS_DISP']=True
-    if len(dispSDSclient.stream)>0:
-        if dispSDSclient.stream[0].stats.npts>0:
+    if len(missing_days_sds_disp)==0:
             do_metric['SDS_DISP']=False
 
     # Check SAM data exist
     for samtype in ['RSAM', 'VSAM', 'VSEM', 'DSAM', 'DR', 'DRS', 'ER']:
+        print(f"Checking for {samtype} data")
         do_metric[samtype] = True
         samobj = eval(f"{samtype}.read(startt, endt, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)")
         for seed_id in samobj.dataframes:
