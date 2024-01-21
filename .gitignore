@@ -1,5 +1,6 @@
 SDS/
 SDS_*/
+.DS_Store
 *.pickle
 *.pkl
 *.png
