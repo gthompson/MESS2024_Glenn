@@ -132,8 +132,8 @@ class Grid:
         fig.plot(x=self.gridlon.reshape(-1), y=self.gridlat.reshape(-1), style=stylestr, pen='black')
         fig.show()
 
-def simulate_DSAM(inv, startt, source_lon, source_lat, source_DR=100.0, sampling_interval=60, npts=10, units='m', surfaceWaves=False, wavespeed_kms=1.5, peakf=8.0, Q=None):
-    a = np.random.uniform(0, 1, size=npts) * source_DR
+def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5, peakf=8.0, Q=None, noise_level_percent=0.0):
+    a = np.random.uniform(0, 1, size=source['npts']) * source['max_DR']
     seed_ids = inventory2seedids(inv, force_location_code='')
     st = obspy.Stream()
     
@@ -141,17 +141,20 @@ def simulate_DSAM(inv, startt, source_lon, source_lat, source_DR=100.0, sampling
         coordinates = inv.get_coordinates(id)
         stalat = coordinates['latitude']
         stalon = coordinates['longitude']
-        distance_km = degrees2kilometers(locations2degrees(stalat, stalon, source_lat, source_lon))
+        distance_km = degrees2kilometers(locations2degrees(stalat, stalon, source['lat'], source['lon']))
         tr = obspy.Trace()
         tr.id = id
-        tr.stats.starttime = startt
-        tr.stats.delta = sampling_interval
+        tr.stats.starttime = source['starttime']
+        tr.stats.delta = source['sampling_interval']
         gsc = DSAM.compute_geometrical_spreading_correction(distance_km, tr.stats.channel, surfaceWaves=surfaceWaves, wavespeed_kms=wavespeed_kms, peakf=peakf)
         isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q)
         tr.data = a / (gsc * isc)
+        if noise_level_percent > 0.0:
+            tr.data += np.multiply(np.nanmax(tr.data), np.random.uniform(0, 1, size=source['npts']) )
+            pass # do something here
         tr.stats['units'] = units
         st.append(tr)
-    return DSAM(stream=st, sampling_interval=sampling_interval)
+    return DSAM(stream=st, sampling_interval=source['sampling_interval'])
 
 class ASL:
     def __init__(self, samobject, metric, inventory, gridobj):
@@ -233,10 +236,14 @@ class ASL:
             else:
                 peakf = self.set_peakf(self.metric, df)
             wavelength_km = peakf * wavespeed_kms
+            distance_km = self.node_distances_km[seed_id]
+            #print(seed_id, len(distance_km), distance_km)
             gsc = DSAM.compute_geometrical_spreading_correction(distance_km, seed_id[-3:], \
                                                        surfaceWaves=surfaceWaves, \
                                                        wavespeed_kms=wavespeed_kms, peakf=peakf)
-            isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q)            
+            #print(seed_id, 'gsc: ', gsc)
+            isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q) 
+            #print(seed_id, 'isc: ', isc)
             '''
             if surfaceWaves and seed_id[-2]=='H':
                 gsc = np.sqrt(np.multiply(self.node_distances_km[seed_id], wavelength_km))
@@ -313,27 +320,27 @@ class ASL:
 
         t = st[0].times('utcdatetime')
 
-        source_DRE = np.empty(len(t), dtype=float)
+        source_DR = np.empty(len(t), dtype=float)
         source_lat = np.empty(len(t), dtype=float)
         source_lon = np.empty(len(t), dtype=float)
         for i in range(len(t)): # loop ovder time samples
-            DRE_stations_nodes = np.empty(  ( len(st), len(gridlat) ) )
+            DR_stations_nodes = np.empty(  ( len(st), len(gridlat) ) )
             for j, seed_id in enumerate(seed_ids):
                 tr = st.select(id=seed_id)[0]
-                DRE_stations_nodes[j] = np.multiply(self.amplitude_corrections[seed_id], tr.data[i])
-            #print('shape of all array = ',DRE_stations_nodes.shape)
-            DRE_mean_nodes = np.nanmean(DRE_stations_nodes, axis=0)
-            DRE_std_nodes = np.nanstd(DRE_stations_nodes, axis=0)
-            #print('shape of mean array = ',DRE_mean_nodes.shape)
-            misfit = np.divide(DRE_std_nodes, DRE_mean_nodes)
+                DR_stations_nodes[j] = np.multiply(self.amplitude_corrections[seed_id], tr.data[i])
+            #print('shape of all array = ',DR_stations_nodes.shape)
+            DR_mean_nodes = np.nanmean(DR_stations_nodes, axis=0)
+            DR_std_nodes = np.nanstd(DR_stations_nodes, axis=0)
+            #print('shape of mean array = ',DR_mean_nodes.shape)
+            misfit = np.divide(DR_std_nodes, DR_mean_nodes)
             #print('shape of misfit array = ',misfit.shape)
             lowest_misfit = np.nanmin(misfit)
             lowest_misfit_index = np.argmin(misfit)
-            source_DRE[i] = DRE_mean_nodes[lowest_misfit_index] * 1e7
+            source_DR[i] = DR_mean_nodes[lowest_misfit_index]
             source_lat[i] = gridlat[lowest_misfit_index]
             source_lon[i] = gridlon[lowest_misfit_index]
             
-        source = {'t':t, 'lat':source_lat, 'lon':source_lon, 'DR':source_DRE}
+        source = {'t':t, 'lat':source_lat, 'lon':source_lon, 'DR':source_DR*1e7}
         return source
 
     def plot(self, source=None, cross_scale=1e3, zoom_level=1, threshold_DR=None, scale=1e-2):
@@ -377,6 +384,7 @@ class ASL:
             x=unique_locationsDF['lon'].to_numpy()
             y=unique_locationsDF['lat'].to_numpy()
             symsize = np.sqrt(unique_locationsDF['energy'].to_numpy())*scale/len(t_dt)
+            symsize = np.divide(symsize, np.nanmax(symsize))
             print(max(symsize))
             #fig.plot(x=x, y=y, style='c0.3c', fill='black', pen='black')
             fig.plot(x=x, y=y, size=symsize, style='cc', fill='black', pen='2p,black')

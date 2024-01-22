@@ -9,7 +9,7 @@ import fnmatch
 import obspy
 #from obspy.core.inventory.inventory import Inventory
 from obspy.geodetics.base import gps2dist_azimuth, degrees2kilometers
-from math import pi
+import math
 
 class SAM:
 
@@ -518,7 +518,7 @@ class SAM:
                 ext: Should be 'csv' or 'pickle' (default). Specifies what file format to save each DataFrame.   
         '''
         print('write')
-        print(self)
+        #print(self)
         if not os.path.isdir(SAM_DIR):
             os.makedirs(SAM_DIR)
         for id in self.dataframes:
@@ -736,16 +736,17 @@ class VSAM(SAM):
         #print('peakf =',peakf)
         if surfaceWaves and chan[1]=='H': # make sure seismic channel
             wavelength_km = wavespeed_kms/peakf
-            gsc = np.sqrt(this_distance_km * wavelength_km)
+            gsc = np.sqrt(np.multiply(this_distance_km, wavelength_km))
         else: # body waves - infrasound always here at local distances
             gsc = this_distance_km
         return gsc
     
+    
     @staticmethod
     def compute_inelastic_attenuation_correction(this_distance_km, peakf, wavespeed_kms, Q):
         if Q:
-            t = this_distance_km / wavespeed_kms # s
-            iac = pow(2.71828, 3.14159 * peakf * t / Q)
+            t = np.divide(this_distance_km, wavespeed_kms) # s
+            iac = np.exp(math.pi * peakf * t / Q) 
             return iac
         else:
             return 1.0  
@@ -979,12 +980,12 @@ class VSEM(VSAM):
 
     @staticmethod
     def Eacoustic_correction(r, c=340, rho=1.2): 
-        Eac = (2 * pi * r**2) / (rho * c)
+        Eac = (2 * math.pi * r**2) / (rho * c)
         return Eac
 
     @staticmethod
     def Eseismic_correction(r, c=3000, rho=2500, S=1, A=1): # a body wave formula
-        Esc = (2 * pi * r**2) * rho * c * S**2/A
+        Esc = (2 * math.pi * r**2) * rho * c * S**2/A
         return Esc
 
     def downsample(self, new_sampling_interval=3600):
