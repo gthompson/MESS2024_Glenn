@@ -132,6 +132,32 @@ class Grid:
         fig.plot(x=self.gridlon.reshape(-1), y=self.gridlat.reshape(-1), style=stylestr, pen='black')
         fig.show()
 
+
+def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5, peakf=8.0, Q=None, noise_level_percent=0.0):
+    npts = len(source['DR'])
+    seed_ids = inventory2seedids(inv, force_location_code='')
+    st = obspy.Stream()
+    
+    for id in seed_ids:
+        coordinates = inv.get_coordinates(id)
+        stalat = coordinates['latitude']
+        stalon = coordinates['longitude']
+        distance_km = degrees2kilometers(locations2degrees(stalat, stalon, source['lat'], source['lon']))
+        tr = obspy.Trace()
+        tr.id = id
+        tr.stats.starttime = source['t'][0]
+        tr.stats.delta = source['t'][1] - source['t'][0]
+        gsc = DSAM.compute_geometrical_spreading_correction(distance_km, tr.stats.channel, surfaceWaves=surfaceWaves, wavespeed_kms=wavespeed_kms, peakf=peakf)
+        isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q)
+        tr.data = source['DR'] / (gsc * isc)
+        if noise_level_percent > 0.0:
+            tr.data += np.multiply(np.nanmax(tr.data), np.random.uniform(0, 1, size=npts) )
+            pass # do something here
+        tr.stats['units'] = units
+        st.append(tr)
+    return DSAM(stream=st, sampling_interval=tr.stats.delta)
+
+'''
 def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5, peakf=8.0, Q=None, noise_level_percent=0.0):
     a = np.random.uniform(0, 1, size=source['npts']) * source['max_DR']
     seed_ids = inventory2seedids(inv, force_location_code='')
@@ -155,6 +181,7 @@ def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5,
         tr.stats['units'] = units
         st.append(tr)
     return DSAM(stream=st, sampling_interval=source['sampling_interval'])
+'''
 
 class ASL:
     def __init__(self, samobject, metric, inventory, gridobj):
