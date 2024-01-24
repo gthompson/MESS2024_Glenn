@@ -25,8 +25,24 @@ def sds2db(dboutday, SDS_DIR, jday):
     allfiles = glob.glob(os.path.join(SDS_DIR, '*', '*', '*', '*.D', f'*{jday}'))
     allfilesstr = " ".join(allfiles)
     os.system(f"miniseed2db {allfilesstr} {dboutday}")
+    
+def fix_montserrat_seed_ids(st):
+    for tr in st:
+        if len(tr.stats.channel)==2 and len(tr.stats.location)==1:
+           tr.stats.channel = tr.stats.channel + tr.stats.location 
+           tr.stats.location =""
+        if tr.stats.channel[0:2]=='SB':
+            tr.stats.channel = 'BH' + tr.stats.channel[2:]
+        if tr.stats.channel[0:2]=='S ':
+            tr.stats.channel = 'SH' + tr.stats.channel[2:]    
+        if tr.stats.channel == 'PRS':
+            tr.stats.channel = 'BDO' # microbarometer, possible an absolute, very-long-period instrument
+        tr.stats.location = ""
+        if tr.stats.network == "":
+            tr.stats.network = 'MV'
+        correct_seed_id(tr)    
 
-def seisandb2SDS(seisandbdir, sdsdir, startt, endt, net, dbout=None, round_sampling_rate=True):
+def seisandb2SDS(seisandbdir, sdsdir, startt, endt, net, dbout=None, round_sampling_rate=True, Montserrat=True):
     sdsobj = SDS.SDSobj(sdsdir)
     missing_days = sdsobj.find_which_days_missing(startt, endt, net)
     mseeddir = 'seisan2mseed'
@@ -74,30 +90,17 @@ def seisandb2SDS(seisandbdir, sdsdir, startt, endt, net, dbout=None, round_sampl
                 st = obspy.core.read(file, format='seisan')
             except:
                 continue
-            thisstarttime = st[0].stats.starttime
-            if thisstarttime - laststarttime == 1201.0: # should be 20 * 60 s = 1200 s
-                thisstarttime -= 1.0
-            elif thisstarttime - laststarttime == 1199.0: # should be 20 * 60 s = 1200 s
-                thisstarttime += 1.0
-                
-            for tr in st:
-                tr.stats.starttime = thisstarttime
-                tr.stats.sampling_rate = np.round(tr.stats.sampling_rate,0)
-                if len(tr.stats.channel)==2 and len(tr.stats.location)==1:
-                   tr.stats.channel = tr.stats.channel + tr.stats.location 
-                   tr.stats.location =""
-                if tr.stats.channel[0:2]=='SB':
-                    tr.stats.channel = 'BH' + tr.stats.channel[2:]
-                if tr.stats.channel[0:2]=='S ':
-                    tr.stats.channel = 'SH' + tr.stats.channel[2:]    
-                if tr.stats.channel == 'PRS':
-                    tr.stats.channel = 'BDO' # microbarometer, possible an absolute, very-long-period instrument
-                tr.stats.location = ""
-                if tr.stats.network == "":
-                    tr.stats.network = 'MV'
-                correct_seed_id(tr)
-            laststarttime = thisstarttime
-            print(st)
+   
+            if Montserrat:
+                thisstarttime = st[0].stats.starttime
+                if thisstarttime - laststarttime == 1201.0: # should be 20 * 60 s = 1200 s
+                    thisstarttime -= 1.0
+                elif thisstarttime - laststarttime == 1199.0: # should be 20 * 60 s = 1200 s
+                    thisstarttime += 1.0
+                for tr in st:
+                    tr.stats.starttime = thisstarttime
+                    tr.stats.sampling_rate = np.round(tr.stats.sampling_rate,0) 
+                fix_montserrat_seed_ids(st)    
             
             sdsobj.stream = st
             sdsobj.write()

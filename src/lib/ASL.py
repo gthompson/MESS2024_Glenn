@@ -24,7 +24,7 @@ def inventory2seedids(inv, chancode='', force_location_code='*'):
     
     return seed_ids
 
-def montserrat_topo_map(show=False, zoom_level=1, inv=None, add_labels=False):
+def montserrat_topo_map(show=False, zoom_level=0, inv=None, add_labels=False, centerlon=-62.177, centerlat=16.711, contour_interval=100, topo_color=True):
     #define etopo data file
     # topo_data = 'path_to_local_data_file'
     #topo_data = '@earth_relief_30s' #30 arc second global relief (SRTM15+V2.1 @ 1.0 km)
@@ -32,30 +32,31 @@ def montserrat_topo_map(show=False, zoom_level=1, inv=None, add_labels=False):
     topo_data = '@earth_relief_03s' #3 arc second global relief (SRTM3S)
     
     # define plot geographical range
-    if zoom_level==1:
-        minlon, maxlon = -62.25, -62.13
-        minlat, maxlat = 16.66, 16.83
-    elif zoom_level==2:
-        minlon, maxlon = -62.21, -62.15
-        minlat, maxlat = 16.66, 16.74    
+    diffdeglat = 0.08/(2**zoom_level)
+    diffdeglon = diffdeglat/np.cos(np.deg2rad(centerlat))
+    minlon, maxlon = centerlon-diffdeglon, centerlon+diffdeglon  #-62.25, -62.13
+    minlat, maxlat = centerlat-diffdeglat, centerlat+diffdeglat  # 16.66, 16.83
+    print(minlon, maxlon, minlat, maxlat)
+    
     # Visualization
     fig = pygmt.Figure()
     
-    # make color pallets
-    pygmt.makecpt(
-        cmap='topo',
-        series='-1300/1300/100',
-        continuous=True
-    )
-    
-    # plot high res topography
-    fig.grdimage(
-        grid=topo_data,
-        region=[minlon, maxlon, minlat, maxlat],
-        projection='M4i',
-        shading=True,
-        frame=True
+    if topo_color:
+        # make color pallets
+        pygmt.makecpt(
+            cmap='topo',
+            series='-1300/1300/%d' % contour_interval,
+            continuous=True
         )
+
+        # plot high res topography
+        fig.grdimage(
+            grid=topo_data,
+            region=[minlon, maxlon, minlat, maxlat],
+            projection='M4i',
+            shading=True,
+            frame=True
+            )
     
     # plot continents, shorelines, rivers, and borders
     fig.coast(
@@ -68,24 +69,25 @@ def montserrat_topo_map(show=False, zoom_level=1, inv=None, add_labels=False):
     # plot the topographic contour lines
     fig.grdcontour(
         grid=topo_data,
-        interval=100,
-        annotation="100+f6p",
+        interval=contour_interval,
+        annotation="%d+f6p" % contour_interval,
         limit="-1300/1300", #to only display it below 
         pen="a0.15p"
         )
     
-    # Plot colorbar
-    fig.colorbar(
-        frame='+l"Topography"',
-    #     position="x11.5c/6.6c+w6c+jTC+v" #for vertical colorbar
-        )
+    if topo_color:
+        fig.colorbar(
+            frame='+l"Topography"',
+        #     position="x11.5c/6.6c+w6c+jTC+v" #for vertical colorbar
+            )
+
     
     if inv:
         seed_ids = inventory2seedids(inv, force_location_code='')
         #print(seed_ids)
         stalat = [inv.get_coordinates(seed_id)['latitude'] for seed_id in seed_ids]
         stalon = [inv.get_coordinates(seed_id)['longitude'] for seed_id in seed_ids]
-        fig.plot(x=stalon, y=stalat, style="s0.4c", fill="dodgerblue4", pen='2p,black')  
+        fig.plot(x=stalon, y=stalat, style="s0.4c", fill="dodgerblue4", pen='2p,blue')  
         
         if add_labels:
             #print('Adding station labels')
@@ -93,7 +95,7 @@ def montserrat_topo_map(show=False, zoom_level=1, inv=None, add_labels=False):
                 net, sta, loc, chan = this_id.split('.')
                 #print(thislat, thislon, net, sta, loc, chan)
                 fig.text(x=thislon, y=thislat, text=sta, textfiles=None, \
-                        #font="Courier-Bold",
+                        font="blue",
                         justify="ML",
                         offset="0.2c/0c",)
     
@@ -126,7 +128,7 @@ class Grid:
         fig = montserrat_topo_map()
         #plt.plot(self.gridlon, self.gridlat, marker='+', color='k', linestyle='none')
         #plt.show()
-        symsize = node_spacing_m/9000
+        symsize = node_spacing_m/2000
         stylestr = f'+{symsize}c'
         
         fig.plot(x=self.gridlon.reshape(-1), y=self.gridlat.reshape(-1), style=stylestr, pen='black')
@@ -149,7 +151,7 @@ def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5,
         tr.stats.delta = source['t'][1] - source['t'][0]
         gsc = DSAM.compute_geometrical_spreading_correction(distance_km, tr.stats.channel, surfaceWaves=surfaceWaves, wavespeed_kms=wavespeed_kms, peakf=peakf)
         isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q)
-        tr.data = source['DR'] / (gsc * isc)
+        tr.data = source['DR'] / (gsc * isc) * 1e-7
         if noise_level_percent > 0.0:
             tr.data += np.multiply(np.nanmax(tr.data), np.random.uniform(0, 1, size=npts) )
             pass # do something here
@@ -157,31 +159,6 @@ def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5,
         st.append(tr)
     return DSAM(stream=st, sampling_interval=tr.stats.delta)
 
-'''
-def simulate_DSAM(inv, source, units='m', surfaceWaves=False, wavespeed_kms=1.5, peakf=8.0, Q=None, noise_level_percent=0.0):
-    a = np.random.uniform(0, 1, size=source['npts']) * source['max_DR']
-    seed_ids = inventory2seedids(inv, force_location_code='')
-    st = obspy.Stream()
-    
-    for id in seed_ids:
-        coordinates = inv.get_coordinates(id)
-        stalat = coordinates['latitude']
-        stalon = coordinates['longitude']
-        distance_km = degrees2kilometers(locations2degrees(stalat, stalon, source['lat'], source['lon']))
-        tr = obspy.Trace()
-        tr.id = id
-        tr.stats.starttime = source['starttime']
-        tr.stats.delta = source['sampling_interval']
-        gsc = DSAM.compute_geometrical_spreading_correction(distance_km, tr.stats.channel, surfaceWaves=surfaceWaves, wavespeed_kms=wavespeed_kms, peakf=peakf)
-        isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q)
-        tr.data = a / (gsc * isc)
-        if noise_level_percent > 0.0:
-            tr.data += np.multiply(np.nanmax(tr.data), np.random.uniform(0, 1, size=source['npts']) )
-            pass # do something here
-        tr.stats['units'] = units
-        st.append(tr)
-    return DSAM(stream=st, sampling_interval=source['sampling_interval'])
-'''
 
 class ASL:
     def __init__(self, samobject, metric, inventory, gridobj):
@@ -264,29 +241,15 @@ class ASL:
                 peakf = self.set_peakf(self.metric, df)
             wavelength_km = peakf * wavespeed_kms
             distance_km = self.node_distances_km[seed_id]
-            #print(seed_id, len(distance_km), distance_km)
+
             gsc = DSAM.compute_geometrical_spreading_correction(distance_km, seed_id[-3:], \
                                                        surfaceWaves=surfaceWaves, \
                                                        wavespeed_kms=wavespeed_kms, peakf=peakf)
-            #print(seed_id, 'gsc: ', gsc)
+
             isc = DSAM.compute_inelastic_attenuation_correction(distance_km, peakf, wavespeed_kms, Q) 
-            #print(seed_id, 'isc: ', isc)
-            '''
-            if surfaceWaves and seed_id[-2]=='H':
-                gsc = np.sqrt(np.multiply(self.node_distances_km[seed_id], wavelength_km))
-            else:
-                gsc = self.node_distances_km[seed_id]
-            #print(seed_id, gsc)
-            
-            if Q:
-                t = np.divide(self.node_distances_km[seed_id], wavespeed_kms)
-                iac = np.power(math.e, math.pi * peakf * t / Q)
-                corrections[seed_id] = np.multiply(gsc, iac)
-            else:
-                corrections[seed_id] = gsc
-            '''
+
             corrections[seed_id] = gsc * isc
-            #print(corrections[seed_id])
+
         self.amplitude_corrections = corrections
             
     def locate(self):
@@ -303,40 +266,38 @@ class ASL:
         locations = []
         best_corrections = {}
         source_amplitudes = []
-        #t = [t.datetime for t in st[0].times('utcdatetime')]
+        
         t = st[0].times('utcdatetime')
+        source_DR = np.empty(len(t), dtype=float)
+        source_lat = np.empty(len(t), dtype=float)
+        source_lon = np.empty(len(t), dtype=float)    
+        source_misfit = np.empty(len(t), dtype=float) 
+        
         for i in range(lendata): # loop ovder time samples
             y = [tr.data[i] for tr in st] # (len(st), 1)
             reduced_y = []
             misfit = []
             best_j = -1
             best_misfit = 1e15
-
-            #####################################################################
-            ##### how to vectorize this loop to compute misfit for each node? ###
-            
             for j in range(len(corrections)): # loop over nodes
                 # assume source is at grid node j
                 c = [self.amplitude_corrections[id][j] for id in seed_ids] # corrections for this node (len(st), 1)
-                #if self.metric=='energy': # for VSEM
-                #    c = np.multiply(c,c)
-                #print(c)
                 reduced_y = np.multiply(y, c) # correcting everything to 1 km distance for all seed ids
                 this_misfit = np.nanstd(reduced_y)/np.nanmedian(reduced_y)
-             #####################################################################
-                
-                #print(this_misfit)
                 if this_misfit < best_misfit:
                     best_misfit = this_misfit
                     best_j = j
                 
             for tracenum, id in enumerate(seed_ids):
-                A = y[tracenum] * self.amplitude_corrections[id][best_j]
-            best_A = np.nanmedian(A)
-            misfit.append(best_misfit)
-            locations.append( ( t[i], gridlat[best_j], gridlon[best_j], best_A )  )
+                DR = y[tracenum] * self.amplitude_corrections[id][best_j]
+            source_DR[i] = np.nanmedian(DR)
+            source_lat[i] = gridlat[best_j]
+            source_lon[i] = gridlon[best_j]
+            source_misfit[i] = best_misfit
             
-        return locations
+            
+        source = {'t':t, 'lat':source_lat, 'lon':source_lon, 'DR':source_DR*1e7, 'misfit':source_misfit}
+        return source
         # Here is where i would add loop over shrinking grid
 
     def fast_locate(self):
@@ -346,10 +307,10 @@ class ASL:
         seed_ids = [tr.id for tr in st]
 
         t = st[0].times('utcdatetime')
-
         source_DR = np.empty(len(t), dtype=float)
         source_lat = np.empty(len(t), dtype=float)
         source_lon = np.empty(len(t), dtype=float)
+        source_misfit = np.empty(len(t), dtype=float) 
         for i in range(len(t)): # loop ovder time samples
             DR_stations_nodes = np.empty(  ( len(st), len(gridlat) ) )
             for j, seed_id in enumerate(seed_ids):
@@ -366,18 +327,14 @@ class ASL:
             source_DR[i] = DR_mean_nodes[lowest_misfit_index]
             source_lat[i] = gridlat[lowest_misfit_index]
             source_lon[i] = gridlon[lowest_misfit_index]
+            source_misfit[i] = lowest_misfit
             
-        source = {'t':t, 'lat':source_lat, 'lon':source_lon, 'DR':source_DR*1e7}
+        source = {'t':t, 'lat':source_lat, 'lon':source_lon, 'DR':source_DR*1e7, 'misfit':source_misfit}
         return source
 
-    def plot(self, source=None, cross_scale=1e3, zoom_level=1, threshold_DR=None, scale=1e-2):
+    def plot(self, source=None, zoom_level=1, threshold_DR=0, scale=1, join=False, number=0, add_labels=False, equal_size=False):
 
-        #stalat = [self.station_coordinates[seed_id]['latitude'] for seed_id in self.station_coordinates]
-        #stalon = [self.station_coordinates[seed_id]['longitude'] for seed_id in self.station_coordinates]
-        
-        
         if source:
-            print(max(source['DR']))
                 
             # timeseries of DR vs threshold_amp
             t_dt = [this_t.datetime for this_t in source['t']]
@@ -386,37 +343,82 @@ class ASL:
             plt.plot(t_dt, np.ones(source['DR'].size) * threshold_DR)
             plt.xlabel('Date/Time (UTC)')
             plt.ylabel('Reduced Displacement (${cm}^2$)')
-
               
-            if threshold_DR:
+            if threshold_DR>0:
                 
                 indices = source['DR']<threshold_DR
                 source['DR'][indices]=0.0
                 source['lat'][indices]=None
                 source['lon'][indices]=None
             
-               
-            # Heatmap
-            symsize = source['DR']*cross_scale
-            df = pd.DataFrame()
-            df['time'] = source['t']
-            df['lon'] = source['lon']
-            df['lat'] = source['lat']
-            df['DR'] = source['DR']
-            df['energy'] = np.multiply(source['DR'], source['DR'])
-            #unique_locationsDF = df[['lat', 'lon']].value_counts().reset_index(name='count')
-            unique_locationsDF = df.groupby(['lat', 'lon'])['energy'].sum().reset_index()
-            #print(unique_locationsDF)
-            fig = montserrat_topo_map(zoom_level=zoom_level, inv=self.inventory)
-            x=unique_locationsDF['lon'].to_numpy()
-            y=unique_locationsDF['lat'].to_numpy()
-            symsize = np.sqrt(unique_locationsDF['energy'].to_numpy())*scale/len(t_dt)
-            symsize = np.divide(symsize, np.nanmax(symsize))
-            print(max(symsize))
-            #fig.plot(x=x, y=y, style='c0.3c', fill='black', pen='black')
-            fig.plot(x=x, y=y, size=symsize, style='cc', fill='black', pen='2p,black')
-            #fig.plot(x=stalon, y=stalat, style="s0.3c", fill="black")
-            fig.show();
+            if join:
+                # Trajectory map
+                x = source['lon']
+                y = source['lat']
+                DR = source['DR']
+                if equal_size:
+                    symsize = scale * np.ones(len(DR))
+                else:
+                    symsize = np.divide(DR, np.nanmax(DR))*scale
+     
+                    
+                maxi = np.argmax(DR)
+                fig = montserrat_topo_map(zoom_level=zoom_level, inv=self.inventory, centerlat=y[maxi], centerlon=x[maxi], add_labels=add_labels, topo_color=False)
+                
+                if number:
+                    if number<len(x):
+                        ind = np.argpartition(DR, -number)[-number:]
+                        x = x[ind]
+                        y = y[ind]
+                        DR = DR[ind]
+                        maxi = np.argmax(DR)
+                        symsize = symsize[ind]
+                pygmt.makecpt(cmap="viridis", series=[0, len(x)])
+                timecolor = [i for i in range(len(x))]
+
+                fig.plot(x=x, y=y, size=symsize, style="cc", pen='1p,black', color=timecolor, cmap=True)
+                fig.colorbar(
+                    frame='+l"Sequence"',
+                    #     position="x11.5c/6.6c+w6c+jTC+v" #for vertical colorbar
+                    )
+
+                '''
+                    fig.plot(x=x, y=y, size=symsize, style="cc", fill='black', pen='1p,black')
+                    k = 1
+                    for i in range(len(x)):
+                        if DR[i] > threshold_DR:
+                            fig.text(x=x[i], y=y[i], text=f"{k}", textfiles=None, \
+                                #font="Courier-Bold",
+                                font="red",
+                                justify="ML",
+                                offset="0.2c/0c",)
+                            k += 1
+                         
+                else:
+                    fig.plot(x=x, y=y, size=symsize, style="cc", fill='black', pen='1p,black')
+                    fig.plot(x=x, y=y, style="f1c/0.05c+c", fill='black', pen='0.5p,black')
+                    fig.plot(x=x[maxi], y=y[maxi], size=symsize[maxi], style="cc", fill='red', pen='1p,red')
+                '''
+                fig.show();                
+                
+            else:    
+                # Heatmap
+                df = pd.DataFrame()
+                df['time'] = source['t']
+                df['lon'] = source['lon']
+                df['lat'] = source['lat']
+                df['DR'] = source['DR']
+                df['energy'] = np.multiply(source['DR'], source['DR'])
+                unique_locationsDF = df.groupby(['lat', 'lon'])['energy'].sum().reset_index()
+                fig = montserrat_topo_map(zoom_level=zoom_level, inv=self.inventory)
+                x=unique_locationsDF['lon'].to_numpy()
+                y=unique_locationsDF['lat'].to_numpy()
+                symsize = np.sqrt(unique_locationsDF['energy'].to_numpy())
+                symsize = np.divide(symsize, np.nanmax(symsize))*scale
+                fig.plot(x=x, y=y, size=symsize, style='cc', fill='black', pen='2p,black')
+                fig.show();
+            
+            
 
             '''
             # time-longitude plot
@@ -429,5 +431,4 @@ class ASL:
             '''
             
         else: # no location data      
-            fig = montserrat_topo_map(zoom_level=zoom_level, inv=self.inventory, show=True)
-          
+            fig = montserrat_topo_map(zoom_level=zoom_level, inv=self.inventory, show=True, add_labels=add_labels)

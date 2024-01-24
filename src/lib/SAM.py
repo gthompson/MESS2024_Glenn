@@ -790,9 +790,9 @@ class VSAM(SAM):
                         gscvlp = self.compute_geometrical_spreading_correction(this_distance_km, chan, surfaceWaves=surfaceWaves, \
                                                            wavespeed_kms=wavespeed_kms, peakf=0.06)
                         iacvlp = self.compute_inelastic_attenuation_correction(this_distance_km, 0.06, wavespeed_kms, Q)
-                        df[col] = df[col] * gscvlp * iacvlp
+                        df[col] = df[col] * gscvlp * iacvlp * 1e7 # convert to cm^2/s (or cm^2 for DR)
                     else:
-                        df[col] = df[col] * gsc * iac                    
+                        df[col] = df[col] * gsc * iac * 1e7                    
             corrected_dataframes[seed_id] = df
         return corrected_dataframes
     
@@ -930,7 +930,7 @@ class VSEM(VSAM):
                     good_st.append(tr)
         return good_st  
     
-    def reduce(self, inventory, source, surfaceWaves=False, Q=None, wavespeed_kms=None, fixpeakf=None):
+    def reduce(self, inventory, source, Q=None, wavespeed_kms=None, fixpeakf=None):
         # if the original Trace objects had coordinates attached, add a method in SAM to save those
         # in self.inventory. And add to SAM __init___ the possibility to pass an inventory object.
         
@@ -959,7 +959,7 @@ class VSEM(VSAM):
                 peakf = np.sqrt(ratio) * 4
 
             net, sta, loc, chan = seed_id.split('.') 
-            esc = self.Eseismic_correction(this_distance_km*1000)
+            esc = self.Eseismic_correction(this_distance_km*1000) # equivalent of gsc
             if Q:
                 iac = self.compute_inelastic_attenuation_correction(this_distance_km, peakf, wavespeed_kms, Q)
             else:
@@ -968,9 +968,9 @@ class VSEM(VSAM):
                 if col in self.get_metrics(): 
                     if col=='VLP':
                         iacvlp = self.compute_inelastic_attenuation_correction(this_distance_km, 0.06, wavespeed_kms, Q)
-                        df[col] = df[col] * esc * iacvlp
+                        df[col] = df[col] * esc * iacvlp # do i need to multiply by iac**2 since this is energy?
                     else:
-                        df[col] = df[col] * esc * iac
+                        df[col] = df[col] * esc * iac # do i need to multiply by iac**2 since this is energy?
             corrected_dataframes[seed_id] = df
         return corrected_dataframes
        
@@ -1075,7 +1075,7 @@ class DR(SAM):
             fig, ax = plt.subplots()
             for tr in st:  
                 t = [this_t.datetime for this_t in tr.times("utcdatetime") ]     
-                ax.semilogy(t, tr.data*1e7, linestyle, label='%s' % tr.id) #, alpha=0.03) 1e7 is conversion from amplitude in m at 1000 m to cm^2
+                ax.semilogy(t, tr.data, linestyle, label='%s' % tr.id) #, alpha=0.03) 1e7 is conversion from amplitude in m at 1000 m to cm^2
             ax.format_xdata = mdates.DateFormatter('%H')
             ax.legend()
             plt.xticks(rotation=90)
@@ -1109,12 +1109,12 @@ class DR(SAM):
             #print(f"{seed_id}: {thismax:.1e} m at 1 km" )
             #maxes[seed_id] = thismax
             allmax.append(thismax)
-            thisDict = {'seed_id': seed_id, classname:np.round(thismax*1e7,2)}
+            thisDict = {'seed_id': seed_id, classname:np.round(thismax,2)}
             lod.append(thisDict)
         allmax = np.array(sorted(allmax))
         medianMax = np.median(allmax) 
         #print(f"Network: {medianMax:.1e} m at 1 km" )   
-        networkMax = np.round(medianMax*1e7,2)
+        networkMax = np.round(medianMax,2)
         thisDict = {'seed_id':'Network', classname:networkMax}
         lod.append(thisDict)
         df = pd.DataFrame(lod)
