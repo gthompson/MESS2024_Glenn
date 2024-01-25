@@ -220,7 +220,7 @@ class SAM:
             metrics = [metrics]
         if kind == 'stream':
             if metrics == ['bands']:
-                metrics = ['VLP', 'LP', 'VT', 'specratio']
+                metrics = ['VLP', 'LP', 'VT', 'fratio']
             for m in metrics:
                 print('METRIC: ',m)
                 st = self.to_stream(metric=m)

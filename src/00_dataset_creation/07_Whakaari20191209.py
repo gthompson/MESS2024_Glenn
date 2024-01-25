@@ -28,21 +28,25 @@ if not os.path.isfile(invfile):
         level="response")
     inv.write(invfile, format = 'stationxml')
 
+# Do 60-s RSAM for these periods first, and then go after all the eruptions in the 2010-2019 period and do 10-s RSAM for those
+# 2013 182-243 Jul 1-Aug 31
+# 2016 61-121 Mar 1 - Apr 30
+# 2019 1-345 # add a couple of days Jan 1 - Dec 11 
+    
 startt = [
-#    (2019,12, 8),
-    (2019,11,1),
-    (2019,10,1),
-    (2019,6,1),
+    (2013,7, 1),
+    (2016,3,1),
+    (2019,1,1),
     ]
 endt = [
-#    (2019,12,10),
-    (2019,12,8),
-    (2019,11,1),
-    (2019,10,1),
+    (2013,9,1),
+    (2016,5,1),
+    (2019,12,15),
     ]
 sampling_interval = 60 # seconds
 Q=None
-ext='pickle'
+#ext='pickle'
+ext='csv'
 secondsPerDay = 60 * 60 * 24
 for i, s in enumerate(startt):
     s = startt[i]
@@ -52,7 +56,8 @@ for i, s in enumerate(startt):
     etime = obspy.core.UTCDateTime(e[0], e[1], e[2])
     print(f'Processing {stime} to {etime}')
     dbout = os.path.join(paths['DB_DIR'],f"dbWhakaari{s[0]}")
-    remote_SDS_DIR = '/shares/newton/raid/data/SDS'
+    #remote_SDS_DIR = '/shares/newton/raid/data/SDS'
+    remote_SDS_DIR = '/data/SDS'
     if os.path.isdir(remote_SDS_DIR):
         paths['SDS_DIR'] = remote_SDS_DIR
     else:
