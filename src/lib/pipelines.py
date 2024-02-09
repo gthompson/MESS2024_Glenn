@@ -62,7 +62,7 @@ def seisandb2SDS(seisandbdir, sdsdir, startt, endt, net, dbout=None, round_sampl
 
         print(dayt, end="\n")
         ymd = dayt.strftime("%Y%m%d")
-        chuckfile = f"chuckmseedblocks{ymd}.msd"
+        #chuckfile = f"chuckmseedblocks{ymd}.msd"
         #dayepoch = int(start_dt_utc.timestamp())
         dayepoch = int(startt.timestamp)
         endepoch = dayepoch + secondsPerDay
@@ -133,6 +133,13 @@ def compute_raw_metrics(paths, startTime, endTime, sampling_interval=60, do_RSAM
     daytime = startTime
     if do_RSAM:
         while daytime < endTime:
+            # try to read RSAM data for this day
+            rsam24h = RSAM.read(daytime, daytime+secondsPerDay, paths['SAM_DIR'], sampling_interval=sampling_interval, ext='pickle')
+            (l, w) = rsam24h.__size__()
+            if w>0:
+                daytime += secondsPerDay
+                continue
+
             print(f'Loading Stream data for {daytime}')
             rawSDSclient.read(daytime, daytime+secondsPerDay)
             st = rawSDSclient.stream
@@ -175,14 +182,15 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile, kind='VEL'):
     #print(f"inv_ids = {inv_ids}")
     smalltime = 0.01
     daytime = startTime
-    taperSecs = 1800
+    taperFraction = 0.05
+    taperSecs = secondsPerDay * taperFraction
     while daytime < endTime:     
         if not daytime in missing_days:
             daytime += secondsPerDay
             continue
         print(f'Loading Stream data for {daytime}')
         #st = mySDSreadClient.get_waveforms("MV", "*", "*", "[SBEHCD]*", daytime-taperSecs, daytime+secondsPerDay+taperSecs)
-        rawSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
+        rawSDSclient.read(daytime - taperSecs, daytime+secondsPerDay+taperSecs, fixnet=net)
         st = rawSDSclient.stream
         st.merge(method=0, fill_value=0)
         print(st)    
@@ -207,8 +215,14 @@ def compute_SDS_corrected(paths, startTime, endTime, invfile, kind='VEL'):
         daytime += secondsPerDay 
     del rawSDSclient, outSDSclient
 
-               
-def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=True, do_VSEM=True, net=None):      
+def check_SAM_metric_exists(samtype, stime, etime, SAM_DIR, sampling_interval, ext):
+    evalstr = f"{samtype}.read(stime, etime, SAM_DIR, sampling_interval=sampling_interval, ext=ext)"
+    sam24h = eval(evalstr)
+    (l, w) = sam24h.__size__()
+    print(samtype, stime, l, w)
+    return w
+
+def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=True, do_VSEM=True, net=None, ext='pickle'):      
     # read SDS_VEL, write VSAM, VSEM data
     #velSDSclient = sdsclient(paths['SDS_DIR'])
     velSDSclient = SDS.SDSobj(paths['SDS_VEL_DIR'], sds_type='D', format='MSEED')
@@ -216,6 +230,15 @@ def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=
     daytime = startt
     if do_VSAM or do_VSEM:
         while daytime < endt:
+            
+            if do_VSAM:
+                w = check_SAM_metric_exists('VSAM', daytime, daytime+secondsPerDay, paths['SAM_DIR'], sampling_interval, ext)
+            if do_VSEM:
+                w = check_SAM_metric_exists('VSEM', daytime, daytime+secondsPerDay, paths['SAM_DIR'], sampling_interval, ext)  
+            if w>0:
+                daytime += secondsPerDay
+                continue
+            
             print(f'Loading Stream data for {daytime}')
             velSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
             st = velSDSclient.stream
@@ -242,11 +265,11 @@ def compute_velocity_metrics(paths, startt, endt, sampling_interval=60, do_VSAM=
             	            vsem24h.write(paths['SAM_DIR'], ext='pickle')   
             	    else:
             	        vsem24h = VSAM(stream=st, sampling_interval=sampling_interval)
-            	        vsem24h.write(paths['SAM_DIR'], ext='pickle')                	              	
+            	        vsem24h.write(paths['SAM_DIR'], ext='pickle')
             daytime += secondsPerDay
     del velSDSclient
     
-def compute_displacement_metrics(paths, startt, endt, sampling_interval=60, do_DSAM=True, net=None):       
+def compute_displacement_metrics(paths, startt, endt, sampling_interval=60, do_DSAM=True, net=None, ext='pickle'):       
     # read SDS_DISP, write DSAM
     #dispSDSclient = sdsclient(paths['SDS_DIR'])
     dispSDSclient = SDS.SDSobj(paths['SDS_DISP_DIR'], sds_type='D', format='MSEED')
@@ -254,6 +277,12 @@ def compute_displacement_metrics(paths, startt, endt, sampling_interval=60, do_D
     daytime = startt
     if do_DSAM:
         while daytime < endt:
+            
+            w = check_SAM_metric_exists('DSAM', daytime, daytime+secondsPerDay, paths['SAM_DIR'], sampling_interval, ext) 
+            if w>0:
+                daytime += secondsPerDay
+                continue            
+            
             print(f'Loading Stream data for {daytime}')
             dispSDSclient.read(daytime, daytime+secondsPerDay, fixnet=net)
             st = dispSDSclient.stream
@@ -336,10 +365,10 @@ def small_sausage(paths, startt, endt, sampling_interval=60, source=None, invfil
 
         print('Calling compute_velocity_metrics')
         compute_velocity_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_VSAM=do_metric['VSAM'], \
-                                 do_VSEM=do_metric['VSEM'], net=net) 
+                                 do_VSEM=do_metric['VSEM'], net=net, ext=ext) 
 
         print('Calling compute_displacement_metrics')    
-        compute_displacement_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_DSAM=do_metric['DSAM'], net=net) 
+        compute_displacement_metrics(paths, startt, endt, sampling_interval=sampling_interval, do_DSAM=do_metric['DSAM'], net=net, ext=ext) 
     
         if source:   
             if not isinstance(sampling_interval, list):
@@ -469,9 +498,14 @@ def check_what_to_do(paths, net, startt, endt, sampling_interval=60, ext='pickle
     for samtype in ['RSAM', 'VSAM', 'VSEM', 'DSAM', 'DR', 'DRS', 'ER']:
         print(f"Checking for {samtype} data")
         do_metric[samtype] = True
+        evalstr = f"{samtype}.read(startt, endt, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)"
+        print(evalstr)
         samobj = eval(f"{samtype}.read(startt, endt, SAM_DIR=paths['SAM_DIR'], sampling_interval=sampling_interval, ext=ext)")
+        print('samobj=',samobj)
         for seed_id in samobj.dataframes:
+            print(seed_id)
             df = samobj.dataframes[seed_id]
+            print(df.head())
             if len(df)>0:
                 do_metric[samtype] = False
         

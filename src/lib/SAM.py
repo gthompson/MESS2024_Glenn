@@ -53,6 +53,8 @@ class SAM:
             print('good_stream:\n',good_stream)
 
         if len(good_stream)>0:
+            for tr in good_stream:
+                self.clip(good_stream)
             if good_stream[0].stats.sampling_rate == 1/sampling_interval:
                 # no downsampling to do
                 for tr in good_stream:
@@ -199,6 +201,15 @@ class SAM:
 
     def __len__(self):
         return len(self.dataframes)
+    
+    def __size__(self):
+        l = len(self.dataframes)
+        if l>0:
+            for seed_id in self.dataframes:
+                w = len(self.dataframes[seed_id])
+        else:
+            w = 0
+        return (l, w)
 
     def plot(self, metrics=['mean'], kind='stream', logy=False, equal_scale=False, outfile=None):
         ''' plot a SAM object 
@@ -625,8 +636,11 @@ class SAM:
             seed_ids = self.get_seed_ids()
             metrics = self.dataframes[seed_ids[0]].columns[1:]
         return metrics
-        
-
+    
+    @staticmethod    
+    def clip(st):
+        pass
+    
     def __str__(self):
         contents=""
         for i, trid in enumerate(self.dataframes):
@@ -652,9 +666,11 @@ class RSAM(SAM):
                 if u == 'COUNTS':
                     good_st.append(tr)
             else: # for RSAM, ok if no units
+                tr.stats['units']='COUNTS'
                 good_st.append(tr)
         return good_st
         
+    
     @staticmethod
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='RSAM'):
 	    return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))
@@ -725,8 +741,21 @@ class VSAM(SAM):
                 u = tr.stats['units'].upper()
                 if u == 'M/S' or u == 'PA':
                     good_st.append(tr)
+            else:
+                if tr.stats.channel[1]=='H':
+                    tr.stats['units']='m/s'
+                elif tr.stats.channel[1]=='D':
+                    tr.stats['units']='Pa'
+                else:
+                    continue
+            good_st.append(tr)
         return good_st    
 
+    @staticmethod
+    def clip(st, cliplevel=1.0, replacevalue=np.nan):
+        for tr in st:
+            tr.data[tr.data > cliplevel] = replacevalue
+    
     @staticmethod
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='VSAM'):
         return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))
@@ -815,8 +844,16 @@ class DSAM(VSAM):
                 u = tr.stats['units'].upper()
                 if u == 'M' or u == 'PA':
                     good_st.append(tr)
-        return good_st
-
+            else:
+                if tr.stats.channel[1]=='H':
+                    tr.stats['units']='m'
+                elif tr.stats.channel[1]=='D':
+                    tr.stats['units']='Pa'
+                else:
+                    continue
+            good_st.append(tr)
+        return good_st 
+    
     @staticmethod
     def get_filename(SAM_DIR, id, year, sampling_interval, ext, name='DSAM'):
         return os.path.join(SAM_DIR,'%s_%s_%4d_%ds.%s' % (name, id, year, sampling_interval, ext))
@@ -828,6 +865,10 @@ class DSAM(VSAM):
         else:
             return DR(dataframes=corrected_dataframes)
 
+    @staticmethod
+    def clip(st, cliplevel=1.0, replacevalue=np.nan):
+        for tr in st:
+            tr.data[tr.data > cliplevel] = replacevalue        
 
 class VSEM(VSAM):
 
@@ -920,29 +961,31 @@ class VSEM(VSAM):
             self.dataframes[tr.id] = df
 
     @staticmethod
+    def clip(st, cliplevel=1.0, replacevalue=np.nan):
+        for tr in st:
+            tr.data[tr.data > cliplevel] = replacevalue
+    
+    @staticmethod
     def check_units(st):
         print('VSEM')
         good_st = obspy.core.Stream()
         for tr in st:
-            if 'units' in tr.stats:
-                u = tr.stats['units'].upper()
-                if u == 'M2/S' or u == 'PA2':
-                    good_st.append(tr)
-        return good_st  
+            if tr.stats.channel[1]=='H':
+                tr.stats['units']='m^2/s'
+            elif tr.stats.channel[1]=='D':
+                tr.stats['units']='Pa^2s'
+            else:
+                continue
+            good_st.append(tr)
+        return good_st      
     
-    def reduce(self, inventory, source, Q=None, wavespeed_kms=None, fixpeakf=None):
+    def reduce(self, inventory, source, Q=None, wavespeed_kms=3.0, fixpeakf=2.0): # have to fix peakf because no VT/LP columns
         # if the original Trace objects had coordinates attached, add a method in SAM to save those
         # in self.inventory. And add to SAM __init___ the possibility to pass an inventory object.
         
         #print(self)
         # Otherwise, need to pass an inventory here.
 
-        if not wavespeed_kms:
-            if surfaceWaves:
-                wavespeed_kms=2 # km/s
-            else:
-                wavespeed_kms=3 # km/s
-        
         # Need to pass a source too, which should be a dict with name, lat, lon, elev.
         distance_km, coordinates = self.get_distance_km(inventory, source)
 
@@ -952,11 +995,6 @@ class VSEM(VSAM):
                 continue
             df = df0.copy()
             this_distance_km = distance_km[seed_id]
-            ratio = df['VT'].sum()/df['LP'].sum()
-            if fixpeakf:
-                peakf = fixpeakf
-            else:
-                peakf = np.sqrt(ratio) * 4
 
             net, sta, loc, chan = seed_id.split('.') 
             esc = self.Eseismic_correction(this_distance_km*1000) # equivalent of gsc
@@ -964,18 +1002,14 @@ class VSEM(VSAM):
                 iac = self.compute_inelastic_attenuation_correction(this_distance_km, peakf, wavespeed_kms, Q)
             else:
                 iac = 1.0
-            for col in df.columns:
-                if col in self.get_metrics(): 
-                    if col=='VLP':
-                        iacvlp = self.compute_inelastic_attenuation_correction(this_distance_km, 0.06, wavespeed_kms, Q)
-                        df[col] = df[col] * esc * iacvlp # do i need to multiply by iac**2 since this is energy?
-                    else:
-                        df[col] = df[col] * esc * iac # do i need to multiply by iac**2 since this is energy?
+            for col in df.columns: # should only be time and energy
+                if col in self.get_metrics(): # should only be energy
+                    df[col] = df[col] * esc * iac**2 # do i need to multiply by iac**2 since this is energy?
             corrected_dataframes[seed_id] = df
         return corrected_dataframes
        
     def compute_reduced_energy(self, inventory, source, surfaceWaves=False, Q=None):
-        corrected_dataframes = self.reduce(inventory, source, surfaceWaves=surfaceWaves, Q=Q)
+        corrected_dataframes = self.reduce(inventory, source, Q=Q)
         return ER(dataframes=corrected_dataframes)
 
     @staticmethod
